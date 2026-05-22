@@ -5,13 +5,14 @@
 本项目采用 Harness 三工作流渐进体系，所有 AI 代理必须遵守以下架构：
 
 - **Rules**（`.cursor/rules/`）：按四层分类的被动规则，自动加载
-  - 记忆层（`memory/`）：项目知识与编码规范，16 个规则
+  - 记忆层（`memory/`）：项目知识与编码规范，17 个规则
   - 编排层（`orchestration/`）：工作流与任务管理，6 个规则
   - 反馈层（`feedback/`）：门禁守卫与质量保障，8 个规则
   - 执行层（`execution/`）：操作权限与安全边界，2 个规则
 - **Skills**（`.cursor/skills/`）：按工作流分组的主动技能，按需调用
 - **Agents**（`.cursor/agents/`）：按工作流分组的子代理，由工作流调度
 - **Workflows**（`.cursor/workflows/`）：三个工作流的 YAML 编排定义
+- **MCP**（`.cursor/mcp/mcp-template.json`）：MCP 服务配置模板，项目级管理
 
 ## 核心原则
 
@@ -33,12 +34,13 @@
 
 | 资源类型 | 使用的资源 |
 |---------|-----------|
-| Agents | `shared/implementer` `shared/code-reviewer` `shared/memory-consolidator` `bugfix/bug-analyst` |
+| Agents | `shared/implementer` `shared/code-reviewer` `shared/memory-consolidator` `bugfix/bug-analyst` `bugfix/ones-loki-trace-investigator` |
 | Skills | `shared/harness-debug-logger`（全局） `shared/verification-before-completion` `bugfix/systematic-debugging` `bugfix/test-driven-bugfix` |
-| Rules | memory: exception-handling, null-safety, logging |
+| Rules | memory: exception-handling, null-safety, logging, mcp-conventions |
 | | orchestration: git-branch, git-commit（+ always: coding-standards-loader, stage-contracts） |
 | | feedback: compilation-guard, lint-guard, test-guard, correction-detection, human-checkpoint（+ always: java-edit-self-check） |
 | | execution: execution-boundary, environment-boundary |
+| MCP | `ones-mcp`（涉及 ONES 缺陷时必需）、`loki-mcp`（可选，日志查询） |
 
 ### 工作流 2：代码重构（扩展 Bug 修复）
 
@@ -72,9 +74,10 @@
 |---------|---------|
 | Agents | `feature/prd-feature-split` `feature/architect-hld` `feature/lld-author` `feature/implementation-planner` `feature/db-ddl` `feature/api-contract` `feature/spec-reviewer` `shared/consistency-reviewer` |
 | Skills | `feature/brainstorming` `feature/writing-plans` `feature/feature-delivery-workflow` `feature/hld-to-feishu` `feature/lld-to-feishu` `shared/code-generation-guardian` |
-| Rules | memory: 全部 16 条激活（含 tenant-isolation） |
+| Rules | memory: 全部 17 条激活（含 tenant-isolation, mcp-conventions） |
 | | orchestration: + task-decomposition |
 | | feedback: + schema-guard |
+| MCP | `feishu-mcp`（飞书云文档发布时必需）、`{env}-mysql-mcp`（涉及 DB 时）、`{env}-swagger-mcp`（可选） |
 
 完整审查链：
 1. `consistency-reviewer` — 设计阶段交接时校验制品对齐
@@ -97,6 +100,7 @@
 | `api-contract.md` | api-contract | lld-author |
 | `lld.md` | lld-author | implementation-planner, spec-reviewer |
 | `impl-plan.md` | implementation-planner | implementer |
+| `root-cause.md` | bug-analyst / ones-loki-trace-investigator | implementer |
 | `decision-log.md` | human-checkpoint | 所有下游子代理 |
 | `harness-debug.md` | harness-debug-logger | 用户调试 |
 | `verification-report.md` | verification-before-completion | 用户审阅 |

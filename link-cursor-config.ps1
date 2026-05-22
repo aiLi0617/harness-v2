@@ -1,7 +1,7 @@
 ﻿<#
 .SYNOPSIS
-    将本项目的 Cursor 配置（agents、rules、skills、workflows、AGENTS.md、CLAUDE.md）
-    软连接到指定目标项目目录。
+    将本项目的 Cursor 配置（agents、rules、skills、workflows、AGENTS.md、CLAUDE.md、mcp/mcp-template.json）
+    软连接/复制到指定目标项目目录。
 
 .PARAMETER Target
     目标项目的根目录路径（必填）
@@ -47,6 +47,35 @@ $items = @(
     @{ Src = ".cursor\CLAUDE.md"; IsDir = $false }
     @{ Src = "docs";              IsDir = $true  }
 )
+
+# MCP 模板单独处理：复制而非链接（每个项目需独立配置密钥）
+$mcpTemplateSrc = Join-Path $Source ".cursor\mcp\mcp-template.json"
+$mcpTemplateDst = Join-Path $Target ".cursor\mcp\mcp-template.json"
+$mcpJsonDst     = Join-Path $Target ".cursor\mcp.json"
+
+if (Test-Path $mcpTemplateSrc) {
+    $mcpParent = Split-Path $mcpTemplateDst -Parent
+    if (-not (Test-Path $mcpParent)) {
+        New-Item -ItemType Directory -Path $mcpParent -Force | Out-Null
+    }
+
+    if ((Test-Path $mcpTemplateDst) -and -not $Force) {
+        Write-Host "[SKIP] MCP 模板已存在，跳过（使用 -Force 覆盖）: .cursor\mcp\mcp-template.json" -ForegroundColor Yellow
+        $skipCount++
+    } else {
+        Copy-Item -Path $mcpTemplateSrc -Destination $mcpTemplateDst -Force
+        Write-Host "[OK] .cursor\mcp\mcp-template.json（复制）" -ForegroundColor Green
+        $successCount++
+    }
+
+    if (-not (Test-Path $mcpJsonDst)) {
+        Write-Host ""
+        Write-Host "[提示] 请复制 .cursor\mcp\mcp-template.json 为 .cursor\mcp.json 并填入实际密钥" -ForegroundColor Magenta
+    }
+} else {
+    Write-Host "[SKIP] 源不存在，跳过: .cursor\mcp\mcp-template.json" -ForegroundColor Yellow
+    $skipCount++
+}
 
 $successCount = 0
 $skipCount = 0

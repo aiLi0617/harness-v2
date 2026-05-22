@@ -1,6 +1,6 @@
 # zfnjjs-harness-v2
 
-> 一套围绕 Cursor IDE 的 AI 编码 Agent 工程化配置仓库。它通过 **Rules / Skills / Agents / Workflows** 四类资源,弥补 LLM 的固有缺陷(无状态、上下文受限、输出概率性),让 AI 在协助开发时**可靠、可追溯、可治理**。
+> 一套围绕 Cursor IDE 的 AI 编码 Agent 工程化配置仓库。它通过 **Rules / Skills / Agents / Workflows / MCP** 五类资源,弥补 LLM 的固有缺陷(无状态、上下文受限、输出概率性),让 AI 在协助开发时**可靠、可追溯、可治理**。
 
 ## 一句话定位
 
@@ -12,8 +12,10 @@
 .cursor/
   AGENTS.md                ← 顶层代理指令(架构概述 + 三工作流总览)
   CLAUDE.md                ← LLM 通用行为准则(精简版)
-  rules/                   ← 被动规则,自动加载(共 32 条)
-    memory/   (16)          编码规范:命名/异常/日志/空值/方法/注释/集合/并发/日期/POJO/依赖/API/数据库/测试/项目架构/多租户隔离
+  mcp/                     ← MCP 服务管理
+    mcp-template.json        MCP 配置模板(不含密钥,复制为 .cursor/mcp.json 后填入)
+  rules/                   ← 被动规则,自动加载(共 33 条)
+    memory/   (17)          编码规范:命名/异常/日志/空值/方法/注释/集合/并发/日期/POJO/依赖/API/数据库/测试/项目架构/多租户隔离/MCP 规范
     orchestration/ (6)      工作流编排:Git 分支/Git 提交/变更实施/任务拆解/阶段契约/规则加载器
     feedback/ (8)           门禁守卫:编译/Lint/测试/变更范围/Schema/纠正检测/人工检查点/Java 编辑自检
     execution/ (2)          安全边界:操作红线/环境边界
@@ -22,9 +24,9 @@
     bugfix/   (2)           结构化调试/测试驱动修复
     refactoring/ (2)        重构规划/安全重构
     feature/  (5)           头脑风暴/编写计划/全流程编排/HLD→飞书/LLD→飞书
-  agents/                  ← 子代理,工作流调度(共 14 个)
+  agents/                  ← 子代理,工作流调度(共 15 个)
     shared/   (4)           实现者/代码审查者/记忆固化/一致性审查
-    bugfix/   (1)           Bug 分析师
+    bugfix/   (2)           Bug 分析师/ONES+Loki 排查
     refactoring/ (2)        重构规划师/质量审查
     feature/  (7)           PRD 拆分/HLD/DDL/API/LLD/实现规划/规格审查
   workflows/               ← 工作流 YAML(共 3 个,渐进包含)
@@ -58,8 +60,9 @@ link-cursor-config.sh      ← macOS/Linux: 同上
 2. 在目标业务项目(如 `broker`)根目录执行链接脚本:
    - Windows:`powershell -File <harness-path>\link-cursor-config.ps1 <broker-path>`
    - macOS/Linux:`bash <harness-path>/link-cursor-config.sh <broker-path>`
-3. 链接脚本会把 `.cursor/rules`、`.cursor/skills`、`.cursor/agents`、`.cursor/workflows` 以 Junction/symlink 方式挂到业务项目下
-4. 业务项目内的所有 AI 操作即自动遵守本仓库规则;升级规则只需在 harness 仓库 `git pull`
+3. 链接脚本会把 `.cursor/rules`、`.cursor/skills`、`.cursor/agents`、`.cursor/workflows` 以 Junction/symlink 方式挂到业务项目下,并**复制** `mcp/mcp-template.json` 到目标项目
+4. 复制 `.cursor/mcp/mcp-template.json` 为 `.cursor/mcp.json`,填入实际密钥(`.cursor/mcp.json` 已被 gitignore 忽略)
+5. 业务项目内的所有 AI 操作即自动遵守本仓库规则;升级规则只需在 harness 仓库 `git pull`
 
 ## 关键机制
 
@@ -78,8 +81,9 @@ link-cursor-config.sh      ← macOS/Linux: 同上
 - **新增编码规范** → `rules/memory/<topic>.mdc`,设置 `globs` 匹配模式
 - **新增技能** → `skills/<工作流>/<技能名>/SKILL.md`
 - **新增子代理** → `agents/<工作流>/<代理名>.md`
+- **新增 MCP** → 在 `.cursor/mcp/mcp-template.json` 中添加配置,在 `rules/memory/mcp-conventions.mdc` 注册表中添加行
 - **新增分类映射时** → 同步更新三处分类表:`coding-standards-loader.mdc`、`correction-detection.mdc`、`memory-consolidator.md`(三表必须保持一致)
-- **适配新项目** → 编辑 `rules/memory/project-architecture.mdc` 填入分层结构和模块职责;不需要的规则把 `alwaysApply` 改为 `false`
+- **适配新项目** → 编辑 `rules/memory/project-architecture.mdc` 填入分层结构和模块职责;不需要的规则把 `alwaysApply` 改为 `false`;复制 `mcp/mcp-template.json` 为 `mcp.json` 并填入本项目密钥
 
 ## 仓库哲学
 
@@ -95,4 +99,4 @@ link-cursor-config.sh      ← macOS/Linux: 同上
 ## 状态
 
 - ⚙️ 当前版本:v2(三工作流渐进体系)
-- 📦 资源数:32 rules + 13 skills + 14 agents + 3 workflows
+- 📦 资源数:33 rules + 13 skills + 15 agents + 3 workflows + 7 MCP

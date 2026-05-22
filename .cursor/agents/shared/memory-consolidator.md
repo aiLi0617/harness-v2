@@ -64,6 +64,8 @@
 | 变更实施相关 | `rules/orchestration/change-implementation.mdc` | 变更流程、先测试再改、渐进式 |
 | 任务拆解相关 | `rules/orchestration/task-decomposition.mdc` | 子任务、依赖、并行、验证方式 |
 | 阶段契约相关 | `rules/orchestration/stage-contracts.mdc` | 上游产物、下游消费、必含章节 |
+| MCP 配置/引用相关 | `rules/memory/mcp-conventions.mdc` | MCP、server、mcp.json、-mcp 后缀、MCP 不可用 |
+| ER 图绘制相关 | `rules/memory/er-diagram-spec.mdc` | ER 图、erDiagram、mermaid、字段编码、关系连线、节点 ID |
 | 无法归类 | **新建** `rules/memory/{topic}.mdc` | — |
 
 ### 3. 写入规则

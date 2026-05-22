@@ -18,7 +18,7 @@ description: ONES 缺陷 + Loki 日志根因排查专家。根据 ONES 缺陷详
 
 ## MCP 工具（使用前必读 schema）
 
-### ONES（server: `ONES`）
+### ONES（server: `ones-mcp`）
 
 1. 可读编号 → 先 `query_issues_by_onesql`（必要时先 `get_onesql_grammar_help`）解析为 `issueID`
 2. `get_issue_details` — 读取标题、描述、环境、复现步骤、附件元数据
@@ -121,15 +121,11 @@ description: ONES 缺陷 + Loki 日志根因排查专家。根据 ONES 缺陷详
 
 ## 备用手段
 
-`loki-mcp` 不可用或结果为空时：
+`loki-mcp` 不可用或查询结果为空时：
 
-```bash
-python scripts/query-loki-custom.py --preset sit-trace <秒> <limit>
-# 将 preset sit-trace 中的 traceId 替换为实际值，或：
-python scripts/query-loki-custom.py <秒> <limit> '<logql>'
-```
-
-PowerShell 传 LogQL 时注意引号；优先用 `--preset sit-operate` + 手动改脚本 PRESETS，或 MCP。
+1. **停止自动查询**，向用户报告 `loki-mcp` 不可用
+2. 询问用户是否有其他 Loki 访问方式（如手动提供日志片段、截图、其他查询工具）
+3. 用户提供日志片段后，跳过"查询日志"步骤，直接进入"分析日志"阶段
 
 ## 输出格式
 

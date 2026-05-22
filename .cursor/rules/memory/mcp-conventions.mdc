@@ -1,0 +1,67 @@
+---
+description: MCP 服务命名与引用规范
+globs: ".cursor/agents/**/*.md,.cursor/skills/**/*.md"
+alwaysApply: false
+---
+
+# MCP 服务规范
+
+## 命名规范
+
+所有 MCP 服务名必须带 `-mcp` 后缀，与 CLI 工具（如 `lark-cli`）区分。
+
+- **通用 MCP**（全环境通用）：`{服务}-mcp`
+- **环境 MCP**（按环境隔离）：`{环境}-{服务}-mcp`
+
+服务名 = 项目级 `.cursor/mcp.json` 中的 key，**无** `user-` 前缀。
+
+## MCP 注册表
+
+### 通用 MCP
+
+| 服务名 | 用途 | 使用方 | 所属工作流 |
+|--------|------|--------|-----------|
+| `ones-mcp` | ONES 缺陷管理（查询/更新缺陷） | `bugfix/ones-loki-trace-investigator`、`bugfix/bug-analyst`（可选） | bugfix |
+| `feishu-mcp` | 飞书 API（云文档发布、消息通知） | `feature/hld-to-feishu`、`feature/lld-to-feishu` | feature-delivery |
+| `chrome-devtools-mcp` | 浏览器调试（页面检查、网络请求） | 按需 | 通用 |
+| `loki-mcp` | Loki 日志查询（LogQL） | `bugfix/ones-loki-trace-investigator` | bugfix |
+
+### 环境 MCP（模板中用 `dev-` 示例，按实际环境调整）
+
+| 服务名模式 | 用途 | 使用方 | 所属工作流 |
+|-----------|------|--------|-----------|
+| `{env}-mysql-mcp` | 数据库访问（查询/DDL） | `shared/implementer`、`feature/db-ddl` | 全部（涉及 DB 时） |
+| `{env}-swagger-mcp` | Apifox API 文档查询 | `feature/api-contract`、`shared/implementer` | feature-delivery |
+| `{env}-nacos-mcp` | Nacos 服务注册/配置查询 | 按需 | 通用 |
+
+## 各工作流必需 MCP
+
+| 工作流 | 必需 | 可选 |
+|--------|------|------|
+| bugfix | `ones-mcp`（涉及 ONES 缺陷时） | `loki-mcp`、`{env}-mysql-mcp` |
+| refactoring | — | `{env}-mysql-mcp` |
+| feature-delivery | `feishu-mcp`（飞书发布时） | `{env}-mysql-mcp`、`{env}-swagger-mcp` |
+
+## 代理引用规范
+
+在 agent `.md` 或 skill `SKILL.md` 中引用 MCP 时：
+
+- 使用 `mcp.json` 中的 key 作为 server 名，如 `server: "ones-mcp"`
+- **禁止**使用大写（`ONES`）、`user-` 前缀（`user-ones`）或不带 `-mcp` 后缀的名称
+- 环境 MCP 在代理文档中写模式（`{env}-mysql-mcp`），实际调用时按当前项目配置确定具体名称
+
+## MCP 不可用时的处理
+
+1. **停止当前操作**，不要猜测或跳过
+2. 向用户报告缺失的 MCP 名称
+3. 提示用户检查 `.cursor/mcp.json` 是否已从模板配置
+4. 等待用户确认后再继续
+
+## 配置说明
+
+MCP 配置模板位于 `.cursor/mcp/mcp-template.json`，使用流程：
+
+1. 复制 `.cursor/mcp/mcp-template.json` 为 `.cursor/mcp.json`
+2. 将 `<PLACEHOLDER>` 替换为实际密钥/地址
+3. 按需增删环境 MCP（如复制 `dev-mysql-mcp` 为 `sit-mysql-mcp`）
+4. `.cursor/mcp.json` 已被 `.gitignore` 忽略，不会提交密钥

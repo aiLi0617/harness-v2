@@ -52,6 +52,8 @@ alwaysApply: true
 | 变更实施流程 | `orchestration/change-implementation.mdc` |
 | 任务拆解 | `orchestration/task-decomposition.mdc` |
 | 阶段契约 | `orchestration/stage-contracts.mdc` |
+| MCP 配置/引用 | `memory/mcp-conventions.mdc` |
+| ER 图绘制 | `memory/er-diagram-spec.mdc` |
 | 无法归类 | 新建 `memory/<topic>.mdc` |
 
 ## 规则写入格式

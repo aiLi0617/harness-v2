@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# 将本项目的 Cursor 配置（agents、rules、skills、workflows、AGENTS.md、CLAUDE.md）
-# 软连接到指定目标项目目录。
+# 将本项目的 Cursor 配置（agents、rules、skills、workflows、AGENTS.md、CLAUDE.md、mcp/mcp-template.json）
+# 软连接/复制到指定目标项目目录。
 #
 # 用法:
 #   ./link-cursor-config.sh <目标项目路径>
@@ -98,6 +98,35 @@ for entry in "${ITEMS[@]}"; do
         ((fail++))
     fi
 done
+
+# MCP 模板单独处理：复制而非链接（每个项目需独立配置密钥）
+mcp_template_src="$SOURCE/.cursor/mcp/mcp-template.json"
+mcp_template_dst="$TARGET/.cursor/mcp/mcp-template.json"
+mcp_json_dst="$TARGET/.cursor/mcp.json"
+
+if [[ -f "$mcp_template_src" ]]; then
+    mcp_parent="$(dirname "$mcp_template_dst")"
+    if [[ ! -d "$mcp_parent" ]]; then
+        mkdir -p "$mcp_parent"
+    fi
+
+    if [[ -e "$mcp_template_dst" ]] && ! $FORCE; then
+        echo "  [WARN] MCP 模板已存在，跳过（使用 -f 覆盖）: .cursor/mcp/mcp-template.json"
+        ((skip++))
+    else
+        cp "$mcp_template_src" "$mcp_template_dst"
+        echo "  [OK]   .cursor/mcp/mcp-template.json（复制）"
+        ((success++))
+    fi
+
+    if [[ ! -f "$mcp_json_dst" ]]; then
+        echo ""
+        echo "  [提示] 请复制 .cursor/mcp/mcp-template.json 为 .cursor/mcp.json 并填入实际密钥"
+    fi
+else
+    echo "  [WARN] 源不存在，跳过: .cursor/mcp/mcp-template.json"
+    ((skip++))
+fi
 
 echo ""
 echo "完成: 成功 $success, 跳过 $skip, 失败 $fail"

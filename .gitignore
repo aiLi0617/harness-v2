@@ -1,2 +1,5 @@
 # IntelliJ IDEA 本地配置（当前仓库存在）
 .idea/
+
+# MCP 配置（仅提交 .template，忽略含密钥的实际配置）
+.cursor/mcp.json

@@ -1,0 +1,87 @@
+{
+  "_README": [
+    "这是 MCP 配置模板文件。使用步骤：",
+    "1. 复制本文件为 .cursor/mcp.json",
+    "2. 将所有 <PLACEHOLDER> 替换为实际值",
+    "3. 删除所有 _note / _README 字段（Cursor 会忽略，但保持整洁）",
+    "4. 环境相关的 MCP 按需复制并改名（如 dev-mysql-mcp → sit-mysql-mcp）",
+    "",
+    "命名规范：",
+    "  通用 MCP：{服务}-mcp（如 ones-mcp、feishu-mcp）",
+    "  环境 MCP：{环境}-{服务}-mcp（如 dev-mysql-mcp、sit-mysql-mcp）"
+  ],
+  "mcpServers": {
+    "ones-mcp": {
+      "_note": "ONES 缺陷管理。StreamSSE 协议，首次使用需在 Cursor 中完成 OAuth 授权。无需手动填密钥。",
+      "url": "https://sz.ones.cn/mcp",
+      "headers": {}
+    },
+    "feishu-mcp": {
+      "_note": "飞书 API（云文档/消息/日历等）。StreamSSE 协议，URL 从飞书开放平台 MCP 插件获取。",
+      "_url说明": "登录 https://mcp.feishu.cn 创建或获取你的 MCP 连接 URL",
+      "url": "<YOUR_FEISHU_MCP_URL>",
+      "headers": {}
+    },
+    "chrome-devtools-mcp": {
+      "_note": "浏览器调试（页面检查/网络请求/截图等）。无需密钥，开箱即用。",
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest"
+      ]
+    },
+    "loki-mcp": {
+      "_note": "可选。Loki 日志查询，ones-loki-trace-investigator 代理依赖此 MCP。未配置时该代理会要求用户手动提供日志。",
+      "_command说明": "填入 Loki MCP Server 的启动命令（如 npx loki-mcp-server）",
+      "_LOKI_URL说明": "Loki 实例地址，如 http://192.168.3.25:3100",
+      "command": "<LOKI_MCP_COMMAND>",
+      "args": [],
+      "env": {
+        "LOKI_URL": "<YOUR_LOKI_URL>"
+      }
+    },
+    "dev-mysql-mcp": {
+      "_note": "环境相关。开发环境数据库访问。按需复制为 sit-mysql-mcp、uat-mysql-mcp 等。",
+      "_MYSQL_HOST说明": "数据库主机地址，如 192.168.3.8",
+      "_MYSQL_DATABASE说明": "目标数据库名，如 broker4agent",
+      "_权限说明": "ALLOW_DDL=true 允许建表改表；ALLOW_DROP/DELETE=false 禁止删表删数据",
+      "command": "npx",
+      "args": [
+        "mysql-mcp-server"
+      ],
+      "env": {
+        "MYSQL_HOST": "<YOUR_MYSQL_HOST>",
+        "MYSQL_PORT": "3306",
+        "MYSQL_USER": "<YOUR_MYSQL_USER>",
+        "MYSQL_PASSWORD": "<YOUR_MYSQL_PASSWORD>",
+        "MYSQL_DATABASE": "<YOUR_DATABASE_NAME>",
+        "ALLOW_DDL": "true",
+        "ALLOW_DROP": "false",
+        "ALLOW_DELETE": "false"
+      }
+    },
+    "dev-swagger-mcp": {
+      "_note": "环境相关。Apifox API 文档查询。每个项目有独立的 project-id 和 token。",
+      "_project-id说明": "在 Apifox 项目设置中获取，替换 command 中的 <YOUR_PROJECT_ID>",
+      "_APIFOX_ACCESS_TOKEN说明": "在 Apifox 个人设置 → API 访问令牌 中生成",
+      "command": "cmd /c npx -y apifox-mcp-server@latest --project-id=<YOUR_PROJECT_ID>",
+      "args": [],
+      "env": {
+        "APIFOX_ACCESS_TOKEN": "<YOUR_APIFOX_TOKEN>"
+      }
+    },
+    "dev-nacos-mcp": {
+      "_note": "环境相关。Nacos 服务注册与配置中心查询。",
+      "_NACOS_ADDR说明": "Nacos 地址，格式 host:port，如 192.168.3.25:8848",
+      "command": "uvx",
+      "args": [
+        "nacos-mcp-router@latest"
+      ],
+      "env": {
+        "NACOS_ADDR": "<YOUR_NACOS_ADDR>",
+        "NACOS_USERNAME": "<YOUR_NACOS_USERNAME>",
+        "NACOS_PASSWORD": "<YOUR_NACOS_PASSWORD>"
+      }
+    }
+  }
+}

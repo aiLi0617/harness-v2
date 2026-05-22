@@ -22,6 +22,7 @@ alwaysApply: true
 |---|---|
 | 编写/修改 Java 代码 | `null-safety` `naming-conventions` `method-design` `collection-handling` `exception-handling` `comment-conventions` `java-edit-self-check` |
 | 涉及数据库/Entity/Mapper | `database-conventions` `schema-guard` |
+| 涉及 ER 图绘制/DDL 设计文档 | `er-diagram-spec` |
 | 涉及 API/Controller | `api-design` |
 | 涉及多租户/跨租户数据访问/`ignore-urls`/`ignore-tables`/MQ 或三方回调接入 | `tenant-isolation` |
 | 涉及并发/多线程 | `concurrency` |
@@ -36,6 +37,7 @@ alwaysApply: true
 | 涉及变更实施流程/渐进式改动 | `change-implementation` |
 | 涉及任务拆解/子任务规划 | `task-decomposition` |
 | 涉及子代理产物交接 | `stage-contracts` |
+| 涉及 MCP 配置/代理引用 MCP | `mcp-conventions` |
 
 多个场景重叠时,合并加载所有相关规则。
 
