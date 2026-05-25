@@ -44,6 +44,7 @@ $items = @(
     @{ Src = ".cursor\skills";    IsDir = $true  }
     @{ Src = ".cursor\workflows"; IsDir = $true  }
     @{ Src = ".cursor\scripts";  IsDir = $true  }
+    @{ Src = ".cursor\plugins";  IsDir = $true  }
     @{ Src = ".cursor\AGENTS.md"; IsDir = $false }
     @{ Src = ".cursor\CLAUDE.md"; IsDir = $false }
     @{ Src = "docs";              IsDir = $true  }
@@ -77,6 +78,10 @@ if (Test-Path $mcpTemplateSrc) {
     Write-Host "[SKIP] 源不存在，跳过: .cursor\mcp\mcp-template.json" -ForegroundColor Yellow
     $skipCount++
 }
+
+Write-Host ""
+Write-Host "[提示] 可选：在业务项目根目录初始化 CodeGraph 索引" -ForegroundColor Magenta
+Write-Host "  powershell -File `"$Source\.cursor\scripts\init-codegraph.ps1`" -ProjectPath `"$Target`"" -ForegroundColor DarkGray
 
 $successCount = 0
 $skipCount = 0

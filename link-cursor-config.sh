@@ -70,6 +70,7 @@ ITEMS=(
     ".cursor/skills:dir"
     ".cursor/workflows:dir"
     ".cursor/scripts:dir"
+    ".cursor/plugins:dir"
     ".cursor/AGENTS.md:file"
     ".cursor/CLAUDE.md:file"
     "docs:dir"
@@ -154,6 +155,10 @@ else
     echo "  [WARN] 源不存在，跳过: .cursor/mcp/mcp-template.json"
     ((skip++))
 fi
+
+echo ""
+echo "  [提示] 可选：在业务项目根目录初始化 CodeGraph 索引"
+echo "    bash \"$SOURCE/.cursor/scripts/init-codegraph.sh\" \"$TARGET\""
 
 echo ""
 ensure_harness_script_permissions "$SOURCE"

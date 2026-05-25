@@ -3,3 +3,11 @@
 
 # MCP 配置（仅提交 .template，忽略含密钥的实际配置）
 .cursor/mcp.json
+
+# CodeGraph 本地索引（在业务项目生成，勿提交）
+.codegraph/
+
+# Understand Anything（全局 clone + 项目 junction，勿提交）
+.cursor-plugin/
+understand-anything-plugin/
+.understand-anything/
