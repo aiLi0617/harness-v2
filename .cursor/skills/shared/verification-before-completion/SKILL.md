@@ -77,11 +77,7 @@
 ```
 
 ## 与 feedback 层规则的关系
-本技能负责**编排何时检查、按什么顺序检查**；具体的检查标准由 `rules/feedback/` 下的门禁规则定义：
-- `compilation-guard.mdc` → 编译检查的具体标准
-- `test-guard.mdc` → 测试检查的具体标准
-- `lint-guard.mdc` → Lint 检查的具体标准
-- `change-scope-guard.mdc` → 变更范围的具体标准
+本技能负责**编排何时检查、按什么顺序检查**；具体的检查标准由 feedback 层门禁规则定义（compilation-guard、test-guard、lint-guard、change-scope-guard，通过 loader 或 alwaysApply 自动加载）。
 
 ## 关键约束
 - 检查顺序固定，前序关卡未通过时不执行后续关卡（快速失败）

@@ -47,8 +47,8 @@ AI 模型有四个固有缺陷：
   CLAUDE.md                ← LLM 通用行为准则（精简版）
   mcp/                     ← MCP 服务管理
     mcp-template.json        MCP 配置模板（不含密钥，复制为 .cursor/mcp.json 后填入）
-  rules/                   ← 被动规则，自动加载（共 33 条）
-    memory/   (17)           编码规范：命名/异常/日志/空值/方法/注释/集合/并发/日期/POJO/依赖/API/数据库/测试/项目架构/多租户隔离/MCP 规范
+  rules/                   ← 被动规则，自动加载（共 42 条）
+    memory/   (26)           编码规范：命名/异常/日志/空值/方法/注释/集合/并发/日期/POJO/依赖/API/数据库/测试/项目架构/微服务/多租户/MCP/Redis/MQ/ORM/安全/控制流/代码格式/OBS/ER 图等
     orchestration/ (6)       工作流编排：Git 分支/Git 提交/变更实施/任务拆解/阶段契约/规则加载器
     feedback/ (8)            门禁守卫：编译/Lint/测试/变更范围/Schema/纠正检测/人工检查点/Java 编辑自检
     execution/ (2)           安全边界：操作红线/环境边界
@@ -467,7 +467,8 @@ flowchart LR
 
 | 扩展类型 | 操作 |
 |----------|------|
-| 新增编码规范 | `rules/memory/<topic>.mdc`，设置 `globs` 匹配模式 |
+| 新增编码规范 | `rules/memory/<topic>.mdc`，设置 `globs` 匹配模式；在 `coding-standards-loader.mdc` 场景表添加加载条目 |
+| 规则组合阅读 | 在 `coding-standards-loader.mdc` 场景表并列列出，**禁止**在规则正文互引其他 `.mdc` |
 | 新增技能 | `skills/<工作流>/<技能名>/SKILL.md` |
 | 新增子代理 | `agents/<工作流>/<代理名>.md` |
 | 新增 MCP | 在 `.cursor/mcp/mcp-template.json` 中添加配置，在 `rules/memory/mcp-conventions.mdc` 注册 |

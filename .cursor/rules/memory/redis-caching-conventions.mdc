@@ -1,0 +1,41 @@
+---
+description: Redis 缓存 Key 与使用规范
+globs: "**/*Redis*.java,**/RedisKeyConstants.java,**/*RedisDAO.java"
+alwaysApply: false
+---
+
+# Redis 缓存规范
+
+## Key 命名
+
+格式：**业务系统名:业务逻辑含义:其它key**
+
+```text
+✅ auth_center:oauth2_access_token:{token}
+❌ token123、cache_user（缺少系统名与语义分层）
+```
+
+- 使用小写与冒号分隔，动态段放末尾
+- 项目内 Key 常量定义在 `dal.redis.RedisKeyConstants`，拼接用 `RedisKeyConstants.join(常量, 动态段...)`
+
+## 使用方式
+
+- **禁止在 Service 中直接注入** `RedisTemplate` / `StringRedisTemplate`
+- Redis 操作封装在 `dal.redis.*RedisDAO`（`@Repository`、`@Slf4j`），Service 注入 DAO
+- 须明确 TTL；禁止无过期时间的临时缓存 key
+- 缓存与 DB 一致性：更新/删除数据时同步失效或更新缓存
+
+## 规划表（提前规划）
+
+项目启动前维护 Redis 使用登记表，至少包含：Key 模式、用途、TTL、所属模块、备注。
+
+## 禁止行为
+
+- 禁止存储超大 value（大 key 问题）
+- 禁止用 Redis 替代事务或强一致存储
+- 禁止 key 无命名空间导致多服务冲突
+
+## 补充规则
+
+- Redis key 必须定义在当前模块的 `RedisKeyConstants` 中；操作必须经 `*RedisDAO` 封装
+- 新增 Redis 用途时，同步更新模块 Redis 规划表（或项目 Redis 登记文档）

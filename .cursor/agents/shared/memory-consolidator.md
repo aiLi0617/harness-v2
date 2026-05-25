@@ -56,9 +56,17 @@
 | POJO/OOP 相关 | `rules/memory/pojo-conventions.mdc` | DTO、VO、Entity、字段、Lombok |
 | 依赖管理相关 | `rules/memory/dependency-management.mdc` | 依赖、版本、Maven、Gradle、引入 |
 | 项目架构/分层 | `rules/memory/project-architecture.mdc` | 分层、Controller、Service、Mapper、模块边界 |
+| 微服务/模块规划 | `rules/memory/microservice-conventions.mdc` | 微服务名、包结构、端口、前缀、cloud-business 模块 |
+| 应用安全 | `rules/memory/security-conventions.mdc` | 权限、脱敏、CSRF、XSS、SQL 注入、防刷、入参校验 |
+| Redis 缓存 | `rules/memory/redis-caching-conventions.mdc` | Redis、缓存、RedisKey、TTL、RedisDAO |
+| OBS/对象存储 | `rules/memory/object-storage-obs-conventions.mdc` | OBS、对象存储、桶、上传、下载、路径 |
+| 代码格式 | `rules/memory/code-style-format.mdc` | 缩进、行宽、大括号、空格、UTF-8、换行符 |
+| 控制语句 | `rules/memory/control-flow-conventions.mdc` | switch、if-else、嵌套、卫语句、条件赋值 |
+| 消息队列 | `rules/memory/message-queue-conventions.mdc` | MQ、Topic、Consumer、Producer、消息、幂等 |
+| ORM/MyBatis | `rules/memory/orm-mybatis-conventions.mdc` | Mapper、resultMap、MyBatis、XML、#{} |
 | 多租户隔离相关 | `rules/memory/tenant-isolation.mdc` | 租户、tenantId、ignore-urls、ignore-tables、MQ 回调 |
 | Schema/Entity 一致性 | `rules/feedback/schema-guard.mdc` | DDL、字段、Entity、类型映射 |
-| Java 编辑自检 | `rules/feedback/java-edit-self-check.mdc` | 自检、Javadoc 模板、判空工具方法 |
+| Java 编辑自检 | `rules/feedback/java-edit-self-check.mdc` | 编辑后流程自检、loader 场景识别、动态规则域报告 |
 | Git 分支相关 | `rules/orchestration/git-branch.mdc` | 分支、branch、合并、merge |
 | Git 提交相关 | `rules/orchestration/git-commit.mdc` | 提交、commit、message |
 | 变更实施相关 | `rules/orchestration/change-implementation.mdc` | 变更流程、先测试再改、渐进式 |
@@ -70,7 +78,7 @@
 
 ### 3. 写入规则
 
-写入格式（追加到目标文件末尾）：
+写入格式（追加到目标文件末尾的 `## 补充规则` 章节）：
 
 ```markdown
 

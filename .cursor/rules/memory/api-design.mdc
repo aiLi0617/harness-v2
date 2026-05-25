@@ -149,23 +149,23 @@ private Integer contractType;
 if (OrderEnums.OrderContractTypeEnum.PAPER_CONTRACT.getCode().equals(contractType)) { ... }
 ```
 
-## 项目特定规则
+## 补充规则
 
-- **[来源: 用户纠正 2026-04-16]** 接口必须严格使用 RESTful 规范——GET 查询、POST 创建、PUT 更新、DELETE 删除，不允许用 POST 代替所有操作
-- **[来源: 用户纠正 2026-04-16]** API 层及 biz 层 Service 方法不返回基本数据类型（Long、Integer、Boolean 等），统一返回业务对象或 VO/DTO；仅在明确需要获取单独数量（count）或 ID 时才允许返回基本类型
-- **[来源: 用户纠正 2026-04-17]** 分页接口必须使用框架 `PageResult<T>` + `PageParam`，禁止在 VO 中自行定义 `pageNo/pageSize/total/list` 等分页字段
-- **[来源: 用户纠正 2026-04-17]** 枚举值必须使用 Integer 数字编码（枚举类 `code` 字段），禁止在 VO/DTO/API 中使用字符串枚举名（如 "ELECTRONIC"、"TRADING" 等）
-- **[来源: 用户纠正 2026-04-22]** `@PathVariable` 禁止冗余声明：当方法参数名与 URL 路径变量名一致时，**不得**在注解括号内重复写名称：
+- 接口必须严格使用 RESTful 规范——GET 查询、POST 创建、PUT 更新、DELETE 删除，不允许用 POST 代替所有操作
+- API 层及 biz 层 Service 方法不返回基本数据类型（Long、Integer、Boolean 等），统一返回业务对象或 VO/DTO；仅在明确需要获取单独数量（count）或 ID 时才允许返回基本类型
+- 分页接口必须使用框架 `PageResult<T>` + `PageParam`，禁止在 VO 中自行定义 `pageNo/pageSize/total/list` 等分页字段
+- 枚举值必须使用 Integer 数字编码（枚举类 `code` 字段），禁止在 VO/DTO/API 中使用字符串枚举名（如 "ELECTRONIC"、"TRADING" 等）
+- `@PathVariable` 禁止冗余声明：当方法参数名与 URL 路径变量名一致时，**不得**在注解括号内重复写名称：
     - ❌ 冗余：`@PathVariable("skuCode") String skuCode`
     - ✅ 正确：`@PathVariable String skuCode`
     - 仅在路径变量名与参数名确实不一致时（如路径是 `{user-id}` 而参数是 `userId`）才保留 `@PathVariable("user-id")`
     - 路径变量由后端自身定义在 `@RequestMapping` 中，可控性高，同名情况下冗余属于反模式
-- **[来源: 用户纠正 2026-04-22]** `@RequestParam` 允许（甚至推荐）显式命名：前端查询参数名常与 Java 驼峰变量名习惯不一致（如 `page_no` vs `pageNo`），显式写 `@RequestParam("pageNo") Integer pageNo` 有利于：
+- `@RequestParam` 允许（甚至推荐）显式命名：前端查询参数名常与 Java 驼峰变量名习惯不一致（如 `page_no` vs `pageNo`），显式写 `@RequestParam("pageNo") Integer pageNo` 有利于：
     - 解耦前端入参命名和 Java 变量命名习惯
     - 避免依赖 `-parameters` 编译参数，行为在不同构建环境下一致
     - 可读性更强，code review 时一眼看清请求参数名
     - 因此 `@RequestParam("xxx") Xxx xxx` 不视为冗余，不强制清理
-- **[来源: 用户纠正 2026-04-22]** **RPC/`*Api` 层禁止返回 `Map` 类型**（包括 `Map<String, String>`、`Map<Long, XxxDTO>` 等任意泛型形态）：
+- **RPC/`*Api` 层禁止返回 `Map` 类型**（包括 `Map<String, String>`、`Map<Long, XxxDTO>` 等任意泛型形态）：
     - 原因：
         - Map 是弱类型容器，字段语义完全丢失，调用方必须阅读实现才能推断 key/value 含义
         - JSON 序列化对 Map key 强制转 String，非 String 类型 key（Long、Integer、枚举）在跨服务反序列化时不可靠

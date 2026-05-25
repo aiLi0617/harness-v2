@@ -55,12 +55,11 @@ alwaysApply: false
 - **页面搜索禁止左模糊和全模糊** — 走搜索引擎
 - **防止字段类型隐式转换导致索引失效**
 
-## 项目特定规则
+## 补充规则
 
-- **[来源: 用户纠正 2026-04-16]** 接口添加了权限注解时，必须同步生成对应的菜单权限 DML（INSERT INTO 菜单表），确保权限数据与代码一致，DML 放在对应模块的 SQL 变更脚本中
-- **[来源: 用户纠正 2026-04-17]** ⚠️ Redis 使用规范——禁止在 Service 中直接注入 `RedisTemplate`/`StringRedisTemplate` 操作 Redis：
-  - Redis key 必须定义在当前模块的 `dal.redis.RedisKeyConstants` 接口中，命名格式 `{模块前缀:业务域}` 或 `模块前缀:业务域`
-  - Redis 操作必须封装在 `dal.redis` 子包下的 `*RedisDAO` 类中（标注 `@Repository`、`@Slf4j`），由 Service 注入 DAO 间接操作
-  - key 拼接统一使用 `RedisKeyConstants.join(常量, 动态段...)` 方法
-- **[来源: 用户纠正 2026-04-21, 三次重复]** ⚠️ 编写 DDL / 数据迁移脚本 / 涉及表字段的业务逻辑前，**必须先 Read 对应的 Entity (`*DO.java`) 确认物理字段**是否存在、类型、所在表；禁止按"业务名称"推断字段（典型反例：假设 `agreement` 表有 `supplier_id`，实际该字段在 `agreement_attribution` 且语义为 `member_id`；假设有 `broker_yunshang_code`，实际分布在两张表）。跨表字段必须 JOIN 到真实来源表，不得冗余假设字段
-> 多租户隔离相关规则（跨租户禁止、`ignore-urls` / `ignore-tables` 识别口径）已迁出至独立文件 `memory/tenant-isolation.mdc`
+- 接口添加了权限注解时，必须同步生成对应的菜单权限 DML（INSERT INTO 菜单表），确保权限数据与代码一致，DML 放在对应模块的 SQL 变更脚本中
+- 字段名长度不超过 20 字符，超长使用公认缩写（如 number→num、image→img）
+- `id` 字段统一 `bigint unsigned`；金额类 `decimal`，小数位按业务（通常 8 位）
+- 单表超 500 万行或 2GB 才考虑分库分表；字段冗余须满足：非频繁修改、非 varchar 超长、非唯一索引字段
+- 禁止 MySQL `WITH RECURSIVE`；`in` 集合元素 ≤ 1000；数据订正前先 select 确认
+- ⚠️ 编写 DDL / 数据迁移脚本 / 涉及表字段的业务逻辑前，**必须先 Read 对应的 Entity (`*DO.java`) 确认物理字段**是否存在、类型、所在表；禁止按"业务名称"推断字段（典型反例：假设 `agreement` 表有 `supplier_id`，实际该字段在 `agreement_attribution` 且语义为 `member_id`；假设有 `broker_yunshang_code`，实际分布在两张表）。跨表字段必须 JOIN 到真实来源表，不得冗余假设字段

@@ -5,7 +5,7 @@
 本项目采用 Harness 三工作流渐进体系，所有 AI 代理必须遵守以下架构：
 
 - **Rules**（`.cursor/rules/`）：按四层分类的被动规则，自动加载
-  - 记忆层（`memory/`）：项目知识与编码规范，17 个规则
+  - 记忆层（`memory/`）：项目知识与编码规范，26 个规则
   - 编排层（`orchestration/`）：工作流与任务管理，6 个规则
   - 反馈层（`feedback/`）：门禁守卫与质量保障，8 个规则
   - 执行层（`execution/`）：操作权限与安全边界，2 个规则
@@ -74,7 +74,7 @@
 |---------|---------|
 | Agents | `feature/prd-feature-split` `feature/architect-hld` `feature/lld-author` `feature/implementation-planner` `feature/db-ddl` `feature/api-contract` `feature/spec-reviewer` `shared/consistency-reviewer` |
 | Skills | `feature/brainstorming` `feature/writing-plans` `feature/feature-delivery-workflow` `feature/hld-to-feishu` `feature/lld-to-feishu` `shared/code-generation-guardian` |
-| Rules | memory: 全部 17 条激活（含 tenant-isolation, mcp-conventions） |
+| Rules | memory: 全部 26 条激活（含 tenant-isolation, mcp-conventions, microservice-conventions 等） |
 | | orchestration: + task-decomposition |
 | | feedback: + schema-guard |
 | MCP | `feishu-mcp`（飞书云文档发布时必需）、`{env}-mysql-mcp`（涉及 DB 时）、`{env}-swagger-mcp`（可选） |
@@ -141,3 +141,9 @@
 2. `feedback/` — 门禁守卫其次
 3. `orchestration/` — 工作流规则
 4. `memory/` — 编码规范
+
+## 规则加载原则
+
+- **规则文件互不引用** — 每条规则自描述本领域约束，正文不写「见 xxx.mdc」
+- **路由层负责组合** — 场景到规则的映射由 `coding-standards-loader.mdc`、workflow YAML、globs 决定
+- **Agents/Skills 通过 loader 发现规则** — 不硬编码 `rules/memory/` 路径（`memory-consolidator` 纠正写入路由除外）

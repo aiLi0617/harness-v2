@@ -21,7 +21,7 @@ alwaysApply: true
 
 1. 提取纠正内容，概括为一条明确的规则
 2. 根据分类映射表确定目标文件
-3. 将规则追加到对应 `.mdc` 文件的末尾（在 `## 项目特定规则` 章节下）
+3. 将规则追加到对应 `.mdc` 文件的末尾（在 `## 补充规则` 章节下）
 
 ## 分类映射表
 
@@ -44,6 +44,14 @@ alwaysApply: true
 | POJO/OOP | `memory/pojo-conventions.mdc` |
 | 依赖管理 | `memory/dependency-management.mdc` |
 | 项目架构/分层 | `memory/project-architecture.mdc` |
+| 微服务/模块规划 | `memory/microservice-conventions.mdc` |
+| 应用安全 | `memory/security-conventions.mdc` |
+| Redis 缓存 | `memory/redis-caching-conventions.mdc` |
+| OBS/对象存储 | `memory/object-storage-obs-conventions.mdc` |
+| 代码格式 | `memory/code-style-format.mdc` |
+| 控制语句 | `memory/control-flow-conventions.mdc` |
+| 消息队列 | `memory/message-queue-conventions.mdc` |
+| ORM/MyBatis | `memory/orm-mybatis-conventions.mdc` |
 | 多租户隔离 | `memory/tenant-isolation.mdc` |
 | Schema/Entity 一致性 | `feedback/schema-guard.mdc` |
 | Java 编辑自检 | `feedback/java-edit-self-check.mdc` |
@@ -59,7 +67,7 @@ alwaysApply: true
 ## 规则写入格式
 
 ```markdown
-## 项目特定规则
+## 补充规则
 
-- **[来源: 用户纠正 YYYY-MM-DD]** 规则描述
+- 规则描述
 ```

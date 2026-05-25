@@ -39,7 +39,7 @@ Controller → Service → Repository → Entity
 
 ### 3. 命名合规检查
 
-对照 `rules/memory/naming-conventions.mdc` 验证：
+对照 loader 已加载的命名规范验证：
 
 | 元素 | 命名规则 | 示例 |
 |------|---------|------|
@@ -103,11 +103,7 @@ Controller → Service → Repository → Entity
 ```
 
 ## 与 rules 的协作关系
-本技能是**主动检查的编排者**，依赖以下规则提供具体标准：
-- `rules/memory/naming-conventions.mdc` → 命名标准
-- `rules/memory/project-architecture.mdc` → 分层结构
-- `rules/memory/method-design.mdc` → 方法设计标准
-- `rules/memory/comment-conventions.mdc` → 注释标准
+本技能是**主动检查的编排者**，执行前须读取 `coding-standards-loader.mdc`，按「编写/修改 Java 代码」「涉及项目结构变更」场景加载并遵守对应规则（命名、分层、方法设计、注释等）。
 
 ## 关键约束
 - 检查在代码写入文件**之前**执行，不是事后审查

@@ -92,7 +92,7 @@
 
 ## 约束
 
-- 遵循 `stage-contracts.mdc` 中概要设计阶段的输出规范
+- 开始前读取 `coding-standards-loader.mdc`，按「涉及子代理产物交接」「涉及项目结构变更」场景加载并遵守对应规则
 - 模块划分需与项目的分层架构（Controller → Service → Repository → Entity）一致
 - 不深入到类/方法签名级别（那是 LLD 的职责）
 - 每个模块必须有明确的职责边界，禁止"万能模块"

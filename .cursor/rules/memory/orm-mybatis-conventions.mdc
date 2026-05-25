@@ -1,0 +1,44 @@
+---
+description: ORM 与 MyBatis 映射规范
+globs: "**/*Mapper*.java,**/*Mapper*.xml,**/mapper/**/*.xml"
+alwaysApply: false
+---
+
+# ORM 映射规范
+
+## 查询与结果映射
+
+- **禁止 `SELECT *`** — 明确列出字段
+- **禁止用 HashMap/Hashtable 接收查询结果** — 须用 `<resultMap>` 或明确 POJO
+- 每个表须有对应 `<resultMap>`，禁止仅用 `resultClass`
+
+## 参数与 SQL 安全
+
+- XML 中参数使用 **`#{}`** — 禁止 `${}` 拼接，防 SQL 注入
+- 动态 SQL 须判空，避免生成非法语句
+
+## 更新规范
+
+- **禁止大而全的 update** — 只更新有改动的字段，避免误更新与 binlog 膨胀
+- **`@Transactional` 不滥用** — 须考虑缓存回滚、消息补偿等副作用
+
+## 布尔字段映射
+
+- 逻辑删除等使用 `deleted`（bit(1)），Entity 布尔属性**不加 `is` 前缀**
+- 若对接遗留库存在 `is_xxx` 列，须在 `<resultMap>` 中显式映射到 Entity 属性
+
+## 类型匹配
+
+- DO 属性类型与数据库字段一一对应 — `bigint` 对应 `Long`，禁止用 `Integer` 存大 id
+- 禁止 `float`/`double` 存金额；金额用 `decimal`，小数位按业务（通常 8 位）
+
+## 禁止行为
+
+- 禁止存储过程、函数、视图作为常规 CRUD 路径
+- 禁止 MySQL `WITH RECURSIVE` — 递归由程序处理
+- 数据订正（delete/update）前须 **先 select 确认**
+
+## 补充规则
+
+- 编写 Mapper/SQL 前须 Read 对应 `*DO.java` 确认物理字段是否存在、类型与所在表
+- `in` 条件集合元素控制在 **1000** 以内；超过须分批或改查询方式

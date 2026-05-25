@@ -85,7 +85,6 @@
 ## 一致性约束
 
 - 表/字段命名与 HLD 模块中使用的领域术语一致
-- 遵循 `database-conventions.mdc` 中的命名规范
 - 每个 HLD 中涉及数据持久化的模块必须有对应的表设计
 
 ## 待扩展事项
@@ -98,8 +97,7 @@
 
 ## 约束
 
-- 遵循 `stage-contracts.mdc` 中数据库设计阶段的输出规范
-- 遵循 `database-conventions.mdc` 数据库规范
+- 开始前读取 `coding-standards-loader.mdc`，按「涉及 ER 图绘制/DDL 设计文档」「涉及数据库/Entity/Mapper」「涉及子代理产物交接」场景加载并遵守对应规则
 - 表名使用蛇形命名（小写字母 + 下划线），格式 `业务名称_表的作用`
 - 每个表必须有主键
 - 每个表必须包含以下基础字段，字符集统一 `utf8mb4 COLLATE utf8mb4_general_ci`：
