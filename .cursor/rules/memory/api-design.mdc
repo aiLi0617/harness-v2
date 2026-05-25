@@ -50,8 +50,8 @@ alwaysApply: false
 - **Long 类型可直接返回前端** — 项目已做全局序列化处理，Long 类型会自动转为 String，无需手动转换
 - **JSON 所有 key 必须 lowerCamelCase** — 小写字母开头，如 `errorCode` 而非 `ERROR_CODE` / `error_code`
 - **列表接口为空时返回空数组 `[]` / 空集合 `{}`** — 不返回 null，减少前端 null 判断
-- **错误响应须包含四部分** — HTTP 状态码 + errorCode + errorMessage + 用户提示信息
-- **errorCode 为字符串类型共 5 位** — 格式 `A/B/C + 四位数字`，A=用户端错误、B=系统错误、C=第三方错误
+- **错误响应须包含** — HTTP 状态码 + 数字 errorCode（对应 `ErrorCodeConstants` 中的 int 编码）+ errorMessage（开发排查）+ 用户提示信息
+- **errorCode 为整数** — 与 `ErrorCode` 常量 `code` 字段一致，JSON 序列化为数字；禁止 A/B/C 五位字符串方案
 - **错误码不直接给用户看** — errorMessage 给开发排查，用户提示信息给终端用户
 - **URL 参数不超过 2048 字节** — 浏览器最小限制
 - **URL 路径规范** — 名词复数、小写、下划线分隔、禁止携带 `.json`/`.xml` 后缀
@@ -59,6 +59,10 @@ alwaysApply: false
 - **时间格式统一** — 前后端统一 `yyyy-MM-dd HH:mm:ss`，统一 GMT
 - **服务端返回用 JSON 格式** — 不用 XML
 - **公开接口须入参保护** — 批量操作须限制数量，防止内存溢出
+- **【强制】body 传参须控制长度** — 超出 nginx/tomcat 默认限制会导致解析失败
+- **【强制】服务器内部重定向 forward** — 外部重定向 URL 统一代理生成
+- **【推荐】响应须标记是否可缓存** — 如 `Cache-Control: s-maxage=...`
+- **【参考】版本号放在 HTTP 头** — 不在 URL path 中加版本，利于向前兼容
 
 ## 分页规范
 

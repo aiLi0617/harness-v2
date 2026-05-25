@@ -1,0 +1,77 @@
+---
+description: 规则文件交叉引用门禁
+globs: ".cursor/rules/**/*.mdc,.cursor/agents/**/*.md"
+alwaysApply: false
+---
+
+# 规则交叉引用门禁
+
+## 架构约束
+
+- **叶子规则自描述** — `rules/memory/`、`rules/feedback/`（路由层除外）、`rules/execution/` 正文不得引用其他 `.mdc` 文件
+- **路由层负责组合** — 场景映射、纠正写入路由、自检流程允许引用路径（见下方白名单）
+- **跨域约束须就地内联** — 需要其他规则域的约束时，复制必要条文到本文件，或改在 `coding-standards-loader.mdc` 场景表并列加载
+
+## 禁止写法（叶子规则）
+
+```markdown
+见 `pojo-conventions.mdc`
+详见 error-codes.mdc
+与 `project-architecture.mdc` 互补
+配合 api-design.mdc 使用
+rules/memory/naming-conventions.mdc
+```
+
+## 允许写法
+
+| 场景 | 示例 |
+|------|------|
+| 同文件章节跳转 | `详见下方分页规范`、`详见 §9.1` |
+| 路由层白名单文件 | loader / correction-detection / java-edit-self-check / rule-cross-ref-guard / memory-consolidator 内的映射表 |
+
+## 路由层白名单
+
+以下文件**允许**引用其他 `.mdc` 路径（仅限映射表与流程说明，禁止在正文复述规范内容）：
+
+- `orchestration/coding-standards-loader.mdc`
+- `feedback/correction-detection.mdc`
+- `feedback/rule-cross-ref-guard.mdc`
+- `agents/shared/memory-consolidator.md`
+
+## 触发时机
+
+修改或新增 `.cursor/rules/**/*.mdc` 后，**完成前必须**运行交叉引用检查脚本。
+
+## 检查方式
+
+在项目根目录执行：
+
+**Windows (PowerShell)**
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/scripts/check-rule-cross-refs.ps1
+```
+
+**macOS / Linux (Bash)**
+
+```bash
+# 推荐：不依赖可执行位，clone 后可直接运行
+bash .cursor/scripts/check-rule-cross-refs.sh
+
+# 或先补权限再 ./ 运行（link-cursor-config.sh 链接后会自动 chmod +x）
+chmod +x .cursor/scripts/check-rule-cross-refs.sh
+.cursor/scripts/check-rule-cross-refs.sh
+```
+
+脚本非零退出码 → **禁止**声明任务完成，须移除违规引用或改入路由层。
+
+## 新增规则文件时
+
+1. 在 `coding-standards-loader.mdc` 场景表添加加载条目（如需组合阅读，并列列出文件名，**禁止**在正文互引）
+2. 同步 `correction-detection.mdc` 与 `memory-consolidator.md` 分类表（若为新领域）
+3. 运行上述检查脚本确认通过
+
+## 补充规则
+
+- 禁止在 memory 规则正文写 `> 来源：xxx` 外部文档归因 — 规范内容直接写正文，项目差异放 `## 补充规则`
+- macOS/Linux：`git clone` 可能丢失 `.sh` 的 `+x`；优先用 `bash .cursor/scripts/…` 运行；或执行 `link-cursor-config.sh` 自动补权限

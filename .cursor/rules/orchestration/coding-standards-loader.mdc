@@ -25,7 +25,7 @@ alwaysApply: true
 | 编写/修改 Java 代码 | `null-safety` `naming-conventions` `method-design` `collection-handling` `exception-handling` `comment-conventions` `code-style-format` `control-flow-conventions` `java-edit-self-check` |
 | 涉及数据库/Entity/Mapper | `database-conventions` `schema-guard` `orm-mybatis-conventions` |
 | 涉及 ER 图绘制/DDL 设计文档 | `er-diagram-spec` |
-| 涉及 API/Controller | `api-design` `security-conventions` |
+| 涉及 API/Controller | `api-design` `security-conventions` `error-codes` |
 | 涉及多租户/跨租户数据访问/`ignore-urls`/`ignore-tables`/MQ 或三方回调接入 | `tenant-isolation` `message-queue-conventions` |
 | 涉及并发/多线程 | `concurrency` |
 | 涉及日期时间处理 | `datetime` |
@@ -33,7 +33,7 @@ alwaysApply: true
 | 涉及 DTO/VO/Entity 设计 | `pojo-conventions` |
 | 涉及测试代码 | `testing-conventions` |
 | 涉及依赖/pom.xml | `dependency-management` |
-| 涉及项目结构变更 | `project-architecture` `microservice-conventions` |
+| 涉及项目结构变更 | `project-architecture` `microservice-conventions` `design-conventions` |
 | 涉及 Redis 缓存 | `redis-caching-conventions` |
 | 涉及 OBS/对象存储/文件上传下载 | `object-storage-obs-conventions` |
 | 涉及应用安全/权限/脱敏/CSRF | `security-conventions` |
@@ -43,7 +43,10 @@ alwaysApply: true
 | 涉及任务拆解/子任务规划 | `task-decomposition` |
 | 涉及子代理产物交接 | `stage-contracts` |
 | 涉及 MCP 配置/代理引用 MCP | `mcp-conventions` |
-| 代码审查 | `naming-conventions` `method-design` `exception-handling` `logging` `comment-conventions` `change-scope-guard` |
+| 代码审查 | `naming-conventions` `method-design` `exception-handling` `logging` `comment-conventions` `change-scope-guard` `error-codes` |
+| 涉及概要/详细设计文档 | `design-conventions` |
+| 涉及错误码定义 | `error-codes` `api-design` |
+| 涉及规则文件维护/新增 .mdc | `rule-cross-ref-guard` |
 
 多个场景重叠时,合并加载所有相关规则。
 

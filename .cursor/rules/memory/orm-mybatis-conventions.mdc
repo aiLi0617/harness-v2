@@ -24,8 +24,9 @@ alwaysApply: false
 
 ## 布尔字段映射
 
-- 逻辑删除等使用 `deleted`（bit(1)），Entity 布尔属性**不加 `is` 前缀**
-- 若对接遗留库存在 `is_xxx` 列，须在 `<resultMap>` 中显式映射到 Entity 属性
+- 数据库是否字段**不使用 `is_` 前缀**，类型 `bit(1)`（0=否，1=是），如 `deleted`、`enabled`；Entity 布尔属性**同样不加 `is` 前缀**
+- 列名与 Entity 属性名一致时可直接映射；无需额外 `is_xxx` → `xxx` 转换
+- 若对接遗留库存在 `is_xxx` 列，须在 `<resultMap>` 中显式映射到 Entity 属性（如 `is_deleted` → `deleted`）
 
 ## 类型匹配
 

@@ -34,6 +34,15 @@ alwaysApply: false
 - 跨模块调用通过 Service 接口，禁止直接访问其他模块的 Mapper
 - 有其他方案存在，绝对不可以使用递归
 
+## 服务器与运行时（阿里巴巴手册 · 工程结构）
+
+- **【强制】远程调用必须设置超时** — HttpClient、Feign、RPC 等须明确 Timeout
+- **【推荐】** 超时生效顺序：客户端 Special Method → 客户端接口 → 服务端 Special Method → 服务端接口
+- **【推荐】** 高并发可调小 TCP `time_wait`；调大最大文件句柄数
+- **【推荐】** JVM 加 `-XX:+HeapDumpOnOutOfMemoryError`；**Xms 与 Xmx 设相同**
+- **【推荐】** 慢服务独立线程池，避免拖垮主线程池
+- **【参考】** 内部重定向用 forward；外部重定向 URL 须统一代理生成（HTTPS 一致）
+
 ## 补充规则
 
 - Orch 编排层尽量避免出现业务判断、数据计算、状态流转等逻辑，应下沉到 BIZ 层

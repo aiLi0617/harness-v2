@@ -43,6 +43,7 @@ $items = @(
     @{ Src = ".cursor\rules";     IsDir = $true  }
     @{ Src = ".cursor\skills";    IsDir = $true  }
     @{ Src = ".cursor\workflows"; IsDir = $true  }
+    @{ Src = ".cursor\scripts";  IsDir = $true  }
     @{ Src = ".cursor\AGENTS.md"; IsDir = $false }
     @{ Src = ".cursor\CLAUDE.md"; IsDir = $false }
     @{ Src = "docs";              IsDir = $true  }

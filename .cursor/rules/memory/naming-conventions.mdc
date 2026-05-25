@@ -8,11 +8,15 @@ alwaysApply: false
 
 ## 基本规则
 
-- **类名** — PascalCase（如 `UserService`、`OrderController`）
+- **禁止以下划线或美元符号开始/结束命名** — 如 `_name`、`name$`
+- **禁止拼音与英文混合、禁止中文命名** — 国际通用名称（如 alibaba、taobao）可视同英文
+- **禁止种族歧视性或侮辱性词语** — 使用 `blockList`/`allowList` 替代 `blackList`/`whiteList`，禁止 `slave` 等
+- **类名** — PascalCase（如 `UserService`、`OrderController`）；DO/PO/DTO/BO/VO/UID 等保持约定大小写
 - **方法名** — camelCase（如 `findById`、`calculateTotal`）
 - **常量** — UPPER_SNAKE_CASE（如 `MAX_RETRY_COUNT`）
-- **包名** — 全小写，不使用下划线（如 `com.example.user`）
+- **包名** — 全小写，点分隔仅一个语义单词，**使用单数形式**（如 `com.example.user.util`）
 - **变量名** — camelCase，语义明确，禁止单字母（循环变量除外）
+- **数组定义** — 类型与中括号紧挨：`int[] arrayDemo`，禁止 `String args[]`
 
 ## 布尔变量
 
@@ -50,6 +54,7 @@ alwaysApply: false
 ## 常量定义
 
 - **long/Long 字面量使用大写 `L`** — 禁止小写 `l`，避免与数字 `1` 混淆
+- **浮点数字面量后缀** — 统一大写 `D` 或 `F`（如 `175.5D`、`150.3F`）
 - **按功能分类维护常量** — 禁止单一大常量类堆砌所有常量（如 `CacheConsts`、`ConfigConsts` 分开）
 - **常量复用层次** — 跨应用（二方库 client）、应用内（子模块 constant）、子工程内、包内、类内 `private static final`
 - **固定范围变化用 enum** — 存在延伸属性时优先 enum 而非魔法字符串

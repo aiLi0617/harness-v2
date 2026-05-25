@@ -49,6 +49,8 @@
 | 注释相关 | `rules/memory/comment-conventions.mdc` | 注释、Javadoc、文档、冗余注释 |
 | 数据库相关 | `rules/memory/database-conventions.mdc` | SQL、索引、事务、表名、字段名、数据库 |
 | API 设计相关 | `rules/memory/api-design.mdc` | 接口、URL、状态码、请求体、响应体、REST |
+| 错误码相关 | `rules/memory/error-codes.mdc` | ErrorCode、int 分段编码、ErrorCodeConstants |
+| 设计规约相关 | `rules/memory/design-conventions.mdc` | 用例图、状态图、时序图、弱依赖、降级 |
 | 测试相关 | `rules/memory/testing-conventions.mdc` | 测试、单元测试、集成测试、覆盖率、断言 |
 | 集合处理相关 | `rules/memory/collection-handling.mdc` | List、Map、Set、Stream、空集合、遍历 |
 | 并发处理相关 | `rules/memory/concurrency.mdc` | 线程、锁、synchronized、volatile、原子、并发 |
@@ -74,6 +76,7 @@
 | 阶段契约相关 | `rules/orchestration/stage-contracts.mdc` | 上游产物、下游消费、必含章节 |
 | MCP 配置/引用相关 | `rules/memory/mcp-conventions.mdc` | MCP、server、mcp.json、-mcp 后缀、MCP 不可用 |
 | ER 图绘制相关 | `rules/memory/er-diagram-spec.mdc` | ER 图、erDiagram、mermaid、字段编码、关系连线、节点 ID |
+| 规则交叉引用 | `rules/feedback/rule-cross-ref-guard.mdc` | 见 xxx.mdc、规则互引、loader 场景 |
 | 无法归类 | **新建** `rules/memory/{topic}.mdc` | — |
 
 ### 3. 写入规则
@@ -140,6 +143,7 @@ alwaysApply: true
 - 写入前必须先读取目标文件，确认文件存在且格式正确
 - 每次只写入一条规则，不批量写入
 - 写入后重新读取文件验证格式完整性
+- 写入后运行规则交叉引用检查（Windows: `check-rule-cross-refs.ps1`；macOS/Linux: `bash .cursor/scripts/check-rule-cross-refs.sh`），非零退出码须修复后再完成
 
 ### 规则质量
 - 规则必须从具体纠正中抽象出通用性（不是只针对某一次的特殊情况）

@@ -37,6 +37,8 @@ alwaysApply: true
 | 注释 | `memory/comment-conventions.mdc` |
 | 数据库 | `memory/database-conventions.mdc` |
 | API | `memory/api-design.mdc` |
+| 错误码 | `memory/error-codes.mdc` |
+| 设计规约 | `memory/design-conventions.mdc` |
 | 测试 | `memory/testing-conventions.mdc` |
 | 集合处理 | `memory/collection-handling.mdc` |
 | 并发处理 | `memory/concurrency.mdc` |
@@ -62,6 +64,7 @@ alwaysApply: true
 | 阶段契约 | `orchestration/stage-contracts.mdc` |
 | MCP 配置/引用 | `memory/mcp-conventions.mdc` |
 | ER 图绘制 | `memory/er-diagram-spec.mdc` |
+| 规则交叉引用 | `feedback/rule-cross-ref-guard.mdc` |
 | 无法归类 | 新建 `memory/<topic>.mdc` |
 
 ## 规则写入格式

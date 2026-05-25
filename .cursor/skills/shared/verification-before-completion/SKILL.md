@@ -54,6 +54,11 @@
 - [ ] 用户输入有校验，无 XSS/注入向量
 - **失败处理**：回退给 implementer 修复安全问题（阻塞级别）
 
+### 第八关：规则交叉引用检查（仅当变更含 `.cursor/rules/**/*.mdc` 时）
+- [ ] 运行检查脚本通过（Windows: `.cursor/scripts/check-rule-cross-refs.ps1`；macOS/Linux: `bash .cursor/scripts/check-rule-cross-refs.sh`）
+- [ ] 新增规则已在 `coding-standards-loader.mdc` 场景表登记（如需组合加载）
+- **失败处理**：移除叶子规则中的跨文件引用，或改在 loader 场景表并列加载
+
 ## 输出
 
 验证通过时：
