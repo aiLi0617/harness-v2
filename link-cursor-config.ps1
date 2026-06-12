@@ -43,11 +43,12 @@ $items = @(
     @{ Src = ".cursor\rules";     IsDir = $true  }
     @{ Src = ".cursor\skills";    IsDir = $true  }
     @{ Src = ".cursor\workflows"; IsDir = $true  }
-    @{ Src = ".cursor\scripts";  IsDir = $true  }
-    @{ Src = ".cursor\plugins";  IsDir = $true  }
+    @{ Src = ".cursor\scripts";   IsDir = $true  }
     @{ Src = ".cursor\AGENTS.md"; IsDir = $false }
     @{ Src = ".cursor\CLAUDE.md"; IsDir = $false }
     @{ Src = "docs";              IsDir = $true  }
+    # 项目特有内容位于 profile/ 目录，不自动链接到目标项目。
+    # 如需为目标项目接入 profile 内容，请手动复制 profile/ 中的文件。
 )
 
 # MCP 模板单独处理：复制而非链接（每个项目需独立配置密钥）

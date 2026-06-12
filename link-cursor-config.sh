@@ -70,10 +70,11 @@ ITEMS=(
     ".cursor/skills:dir"
     ".cursor/workflows:dir"
     ".cursor/scripts:dir"
-    ".cursor/plugins:dir"
     ".cursor/AGENTS.md:file"
     ".cursor/CLAUDE.md:file"
     "docs:dir"
+    # 项目特有内容位于 profile/ 目录，不自动链接到目标项目。
+    # 如需为目标项目接入 profile 内容，请手动复制 profile/ 中的文件。
 )
 
 success=0
