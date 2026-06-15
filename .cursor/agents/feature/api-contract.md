@@ -108,6 +108,7 @@ API 设计师。基于概要设计（HLD），定义 API 接口契约，包括�
 
 - 接口必须与 HLD 接口概览一一对应
 - DTO 字段与 DDL 字段语义一致（如 DDL 已完成）
+- 遵循 `api-design.mdc` 中的 API 设计规范
 
 ## 待扩展事项
 
@@ -119,7 +120,8 @@ API 设计师。基于概要设计（HLD），定义 API 接口契约，包括�
 
 ## 约束
 
-- 开始前读取 `coding-standards-loader.mdc`，按「涉及 API/Controller」「涉及子代理产物交接」场景加载并遵守对应规则
+- 遵循 `stage-contracts.mdc` 中 API 契约设计阶段的输出规范
+- 遵循 `api-design.mdc` API 设计规范
 - URL 使用蛇形或短横线命名，全小写
 - 使用标准 HTTP 状态码
 - 所有接口必须定义错误响应

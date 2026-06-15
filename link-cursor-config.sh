@@ -1,43 +1,17 @@
 #!/usr/bin/env bash
 #
-# 将本项目的 Cursor 配置（agents、rules、skills、workflows、scripts、AGENTS.md、CLAUDE.md、mcp/mcp-template.json）
+# 将本项目的 Cursor 配置（agents、rules、skills、workflows、AGENTS.md、CLAUDE.md、mcp/mcp-template.json）
 # 软连接/复制到指定目标项目目录。
 #
 # 用法:
 #   ./link-cursor-config.sh <目标项目路径>
-#   bash link-cursor-config.sh <目标项目路径>          # 无 +x 时也可
-#   ./link-cursor-config.sh -f <目标项目路径>          # 强制覆盖已有项
+#   ./link-cursor-config.sh -f <目标项目路径>    # 强制覆盖已有项
 #
 # 示例:
 #   ./link-cursor-config.sh ~/Work/Project/Java/456
 #   ./link-cursor-config.sh -f ~/Work/Project/Java/456
 
 set -euo pipefail
-
-ensure_harness_script_permissions() {
-    local root="$1"
-    local script
-    local rel
-    local fixed=0
-
-    for script in "$root/link-cursor-config.sh" "$root"/.cursor/scripts/*.sh; do
-        [[ -f "$script" ]] || continue
-        if [[ ! -x "$script" ]]; then
-            chmod +x "$script"
-            rel="${script#"$root"/}"
-            echo "  [OK]   设置可执行: $rel"
-            fixed=$((fixed + 1))
-        fi
-    done
-
-    if [[ "$fixed" -gt 0 ]]; then
-        echo "  已为 $fixed 个 shell 脚本补全可执行权限（macOS/Linux git clone 常见丢失 +x）"
-    fi
-}
-
-# git clone 后可能无 +x；先修复 harness 源目录内脚本，再执行链接
-SOURCE_EARLY="$(cd "$(dirname "$0")" && pwd)"
-ensure_harness_script_permissions "$SOURCE_EARLY"
 
 FORCE=false
 if [[ "${1:-}" == "-f" ]]; then
@@ -69,12 +43,9 @@ ITEMS=(
     ".cursor/rules:dir"
     ".cursor/skills:dir"
     ".cursor/workflows:dir"
-    ".cursor/scripts:dir"
     ".cursor/AGENTS.md:file"
     ".cursor/CLAUDE.md:file"
     "docs:dir"
-    # 项目特有内容位于 profile/ 目录，不自动链接到目标项目。
-    # 如需为目标项目接入 profile 内容，请手动复制 profile/ 中的文件。
 )
 
 success=0
@@ -157,12 +128,6 @@ else
     ((skip++))
 fi
 
-echo ""
-echo "  [提示] 可选：在业务项目根目录初始化 CodeGraph 索引"
-echo "    bash \"$SOURCE/.cursor/scripts/init-codegraph.sh\" \"$TARGET\""
-
-echo ""
-ensure_harness_script_permissions "$SOURCE"
 echo ""
 echo "完成: 成功 $success, 跳过 $skip, 失败 $fail"
 
