@@ -39,7 +39,7 @@ BaseException (RuntimeException)
 
 ## AI 易忽略的异常处理规则
 
-- **RuntimeException 通过预检查规避** — 如 `NullPointerException` 通过 `if (obj != null)` 规避，不通过 catch 处理
+- **RuntimeException 通过预检查规避** — 如 `NullPointerException` 通过 `Objects.nonNull()` 等规避，不通过 catch 处理
 - **异常不用于流程控制** — 异常处理效率远低于条件判断
 - **catch 要区分异常类型** — 对大段代码统一 `catch(Exception)` 是不负责任的，须按异常类型分别处理
 - **RPC/二方包/动态类调用用 Throwable 捕获** — `catch(Exception)` 无法拦截 `NoSuchMethodError` 等 Error，须用 `catch(Throwable)`
@@ -47,4 +47,6 @@ BaseException (RuntimeException)
 - **finally 必须关闭资源** — 资源对象、流对象在 finally 中关闭；JDK7+ 优先使用 try-with-resources
 - **异常信息须包含案发现场** — `log.error("inputParams: {} and errorMessage: {}", params, e.getMessage(), e)` 同时保留参数和堆栈
 - **方法返回 null 时须注释说明** — 何种情况返回 null，调用方有责任判空
-- **分层异常处理** — DAO 层 `catch(Exception)` 转为 `DAOException` 向上抛不打日志；Service 层必须记录日志；Web 层不再向上抛，转为友好错误页面；开放接口层转为错误码
+- **分层异常处理** — DAO 层 `catch(Exception)` 转为 `DAOException` 向上抛不打日志；Service 层必须记录日志；Web 层不再向上抛，转为友好错误页面；开放接口层转为统一 `ErrorCode` 常量抛出
+- **【推荐】区分 unchecked/checked** — 禁止直接 `throw new RuntimeException()` 或裸 `Exception`/`Throwable`；使用有业务含义的自定义异常（如 `ServiceException`）
+- **【参考】跨应用 RPC 优先 Result**（isSuccess + 错误码 + 简短信息）；应用内部推荐抛异常

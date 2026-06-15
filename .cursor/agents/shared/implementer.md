@@ -40,8 +40,9 @@
 1. 读取 impl-plan.md，确认当前要执行的子任务
 2. 读取 lld.md，理解类设计和方法签名
 3. 读取 decision-log.md，确认用户已有决策
-4. 创建或切换到独立 feature 分支
-5. 写入 harness-debug.md: "子代理派发 — implementer"
+4. 读取 coding-standards-loader.mdc，按当前子任务场景加载并遵守对应规则
+5. 创建或切换到独立 feature 分支
+6. 写入 harness-debug.md: "子代理派发 — implementer"
 ```
 
 ### 2. 编码阶段（对每个子任务重复）
@@ -72,7 +73,7 @@
 - **禁止**直接在主分支（main/master/develop）上提交
 - 分支命名：`feature/{feature-slug}/task-{N}-{简述}`
 - 每个子任务至少一个原子提交
-- 提交信息遵循 `rules/orchestration/git-commit.mdc`
+- 提交信息遵循 Git 提交规范（通过 loader「涉及 Git 提交」场景加载）
 
 ### 代码生成守卫
 - 创建**任何新源代码文件**前，必须先调用 `skills/shared/code-generation-guardian` 技能
@@ -110,6 +111,5 @@
 | `skills/shared/harness-debug-logger` | 每步写入日志 |
 | `agents/shared/code-reviewer` | 完成后接受审查 |
 | `agents/shared/consistency-reviewer` | 设计阶段审查一致性 |
-| `rules/memory/*` | 编码时遵守的规范 |
-| `rules/orchestration/git-*` | 分支和提交规范 |
-| `rules/execution/execution-boundary.mdc` | 操作权限红线 |
+| `coding-standards-loader.mdc` | 编码时按场景加载规范 |
+| `execution-boundary` 等 execution 层规则 | 操作权限红线（alwaysApply 自动加载） |

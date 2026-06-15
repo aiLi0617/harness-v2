@@ -32,15 +32,26 @@ alwaysApply: true
 ## 规则
 
 - **原子提交** — 每个提交只做一件事，可独立编译和理解
-- **subject 不超过 72 字符**，使用祈使句（如 "add" 而非 "added"）
-- **body 解释 why**，不解释 what（what 看 diff 即可）
-- 涉及破坏性变更时，footer 添加 `BREAKING CHANGE:` 说明
+- **subject 不超过 72 字符**，使用中文祈使句（如「添加」而非「添加了」）
+- **body 用中文解释 why**，不解释 what（what 看 diff 即可）
+- 涉及破坏性变更时，footer 添加 `BREAKING CHANGE:` 说明（正文仍用中文）
 
 ## 示例
 
 ```
-feat(user): add email verification on registration
+feat(user): 注册时增加邮箱验证
 
-Add email verification step to prevent fake account creation.
-Verification link expires in 24 hours.
+防止虚假账号批量注册；验证链接 24 小时内有效。
+```
+
+```
+fix(cart): 修复结算时库存校验遗漏
+
+并发下单场景下未二次校验 SKU 库存，导致超卖。
+```
+
+```
+refactor(rules): 将 git-commit 示例改为中文
+
+统一团队 commit message 语言，便于 SCM 生成与历史阅读对齐。
 ```

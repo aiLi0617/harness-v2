@@ -111,8 +111,7 @@
 
 ## 约束
 
-- 遵循 `stage-contracts.mdc` 中详细设计阶段的输出规范
+- 开始前读取 `coding-standards-loader.mdc`，按「涉及子代理产物交接」「涉及项目结构变更」「涉及数据库/Entity/Mapper」「涉及 API/Controller」场景加载并遵守对应规则
 - 不写实际代码，只定义签名和逻辑描述
-- 遵循项目分层架构（`project-architecture.mdc`）
 - 方法签名必须包含异常声明
 - 如果发现 HLD、DDL、API 之间存在不一致，报告问题而非自行修补

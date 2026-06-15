@@ -10,7 +10,7 @@ alwaysApply: false
 
 - **表名** — 小写字母或数字，下划线分隔，**使用名词单数**（如 `user_order` 而非 `user_orders`），禁止数字开头和两个下划线间只出现数字
 - **字段名** — 小写下划线（如 `create_time`、`user_name`），禁止大写字母
-- **是否概念字段** — 不使用 `is_` 前缀，类型 `bit(1)`（0=否，1=是），如 `deleted`、`enabled`
+- **是否概念字段** — **不使用 `is_` 前缀**（项目约定，区别于阿里巴巴手册 `is_xxx`），类型 `bit(1)`（0=否，1=是），如 `deleted`、`enabled`；对应 POJO 布尔属性同样禁止 `is` 前缀（如 `deleted` 而非 `isDeleted`），避免框架反序列化属性名不一致
 - **非负数字段** — 必须声明为 `unsigned`
 - **索引命名** — 主键 `pk_字段名`、唯一索引 `uk_字段名`、普通索引 `idx_字段名`
 - **表命名建议** — `业务名称_表的作用`（如 `trade_config`）
@@ -29,7 +29,10 @@ alwaysApply: false
 - **小数用 decimal** — 禁止使用 `float` 和 `double`，存在精度损失
 - **字符串长度** — varchar 不超过 5000；超过用 text 类型独立成表
 - **定长字符串用 char** — 如存储的值长度几乎相等
-- **逻辑删除** — 禁止物理删除，使用 `deleted`（bit(1)）字段标记，0=未删除，1=已删除
+- **逻辑删除** — 禁止物理删除，使用 `deleted`（`bit(1)`）字段标记，0=未删除，1=已删除
+- **禁止物理删除操作** — 须逻辑删除
+- **表名不使用复数名词**
+- **单表行数超过 500 万或容量超过 2GB** 才推荐分库分表
 - **字段注释** — 修改字段含义或追加状态时须及时更新注释
 
 ## SQL 规约
@@ -51,16 +54,19 @@ alwaysApply: false
 ## 索引规约
 
 - **业务唯一字段必须建唯一索引** — 包括组合字段
-- **组合索引区分度最高的在最左边**
+- **组合索引区分度最高的在最左边**；存在非等号与等号混合条件时，**等号列前置**（如 `where c>? and d=?` 建 `idx_d_c`）
 - **页面搜索禁止左模糊和全模糊** — 走搜索引擎
 - **防止字段类型隐式转换导致索引失效**
+- **【推荐】order by 利用索引有序性** — 组合索引中 order by 字段放组合顺序最后，避免 filesort
+- **【推荐】覆盖索引** — 查询尽量 using index，避免回表
+- **【推荐】超多分页** — 先定位 id 段再关联，避免大 offset
+- **【推荐】SQL 性能目标** — 至少 range，要求 ref，最好 const
 
-## 项目特定规则
+## 补充规则
 
-- **[来源: 用户纠正 2026-04-16]** 接口添加了权限注解时，必须同步生成对应的菜单权限 DML（INSERT INTO 菜单表），确保权限数据与代码一致，DML 放在对应模块的 SQL 变更脚本中
-- **[来源: 用户纠正 2026-04-17]** ⚠️ Redis 使用规范——禁止在 Service 中直接注入 `RedisTemplate`/`StringRedisTemplate` 操作 Redis：
-  - Redis key 必须定义在当前模块的 `dal.redis.RedisKeyConstants` 接口中，命名格式 `{模块前缀:业务域}` 或 `模块前缀:业务域`
-  - Redis 操作必须封装在 `dal.redis` 子包下的 `*RedisDAO` 类中（标注 `@Repository`、`@Slf4j`），由 Service 注入 DAO 间接操作
-  - key 拼接统一使用 `RedisKeyConstants.join(常量, 动态段...)` 方法
-- **[来源: 用户纠正 2026-04-21, 三次重复]** ⚠️ 编写 DDL / 数据迁移脚本 / 涉及表字段的业务逻辑前，**必须先 Read 对应的 Entity (`*DO.java`) 确认物理字段**是否存在、类型、所在表；禁止按"业务名称"推断字段（典型反例：假设 `agreement` 表有 `supplier_id`，实际该字段在 `agreement_attribution` 且语义为 `member_id`；假设有 `broker_yunshang_code`，实际分布在两张表）。跨表字段必须 JOIN 到真实来源表，不得冗余假设字段
-> 多租户隔离相关规则（跨租户禁止、`ignore-urls` / `ignore-tables` 识别口径）已迁出至独立文件 `memory/tenant-isolation.mdc`
+- 接口添加了权限注解时，必须同步生成对应的菜单权限 DML（INSERT INTO 菜单表），确保权限数据与代码一致，DML 放在对应模块的 SQL 变更脚本中
+- 字段名长度不超过 20 字符，超长使用公认缩写（如 number→num、image→img）
+- `id` 字段统一 `bigint unsigned`；金额类 `decimal`，小数位按业务（通常 8 位）
+- 单表超 500 万行或 2GB 才考虑分库分表；字段冗余须满足：非频繁修改、非 varchar 超长、非唯一索引字段
+- 禁止 MySQL `WITH RECURSIVE`；`in` 集合元素 ≤ 1000；数据订正前先 select 确认
+- ⚠️ 编写 DDL / 数据迁移脚本 / 涉及表字段的业务逻辑前，**必须先 Read 对应的 Entity (`*DO.java`) 确认物理字段**是否存在、类型、所在表；禁止按"业务名称"推断字段（典型反例：假设 `agreement` 表有 `supplier_id`，实际该字段在 `agreement_attribution` 且语义为 `member_id`；假设有 `broker_yunshang_code`，实际分布在两张表）。跨表字段必须 JOIN 到真实来源表，不得冗余假设字段

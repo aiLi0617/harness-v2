@@ -48,6 +48,6 @@ if (obj != null && obj.getXxx() != null && obj.getXxx().getYyy() != null) ...
 - **`addAll()` 前须判断入参集合是否为 null** — `ArrayList#addAll` 对 null 入参直接抛 NPE
 - **高并发场景避免用"等于"判断退出** — 用 `>=` 或 `<=` 区间判断代替 `==`，防止被"击穿"
 
-## 项目特定规则
+## 补充规则
 
-- **[来源: 用户纠正 2026-04-16]** 判空禁止直接使用 `== null` / `!= null`，统一使用工具方法如 `Objects.isNull()`、`Objects.nonNull()`、`ObjectUtil.isNull()` 或 `CollUtil.isEmpty()` 等
+- 判空禁止直接使用 `== null` / `!= null`，统一使用工具方法如 `Objects.isNull()`、`Objects.nonNull()`、`ObjectUtil.isNull()` 或 `CollUtil.isEmpty()` 等

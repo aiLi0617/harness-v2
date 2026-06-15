@@ -30,12 +30,41 @@
         "chrome-devtools-mcp@latest"
       ]
     },
+    "codegraph-mcp": {
+      "_note": "可选。本地代码知识图谱（符号搜索/调用链/影响分析）。100% 本地，无需密钥。先在业务项目根目录执行 codegraph init -i 建立 .codegraph/ 索引。",
+      "_安装说明": "默认 npx 零安装；若已 npm i -g @colbymchenry/codegraph，可将 command 改为 codegraph、args 去掉 -y 与包名",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@colbymchenry/codegraph",
+        "serve",
+        "--mcp",
+        "--path",
+        "${workspaceFolder}"
+      ]
+    },
     "loki-mcp": {
-      "_note": "可选。Loki 日志查询，ones-loki-trace-investigator 代理依赖此 MCP。未配置时该代理会要求用户手动提供日志。",
-      "_command说明": "填入 Loki MCP Server 的启动命令（如 npx loki-mcp-server）",
-      "_LOKI_URL说明": "Loki 实例地址，如 http://192.168.3.25:3100",
-      "command": "<LOKI_MCP_COMMAND>",
-      "args": [],
+      "_note": "可选。Grafana Loki 日志查询（LogQL）。ones-loki-trace-investigator 依赖此 MCP。未配置时该代理会要求用户手动提供日志。",
+      "_安装说明": "运行 .cursor/scripts/init-loki-mcp.ps1 或 .sh（构建 Docker 镜像或本地二进制并写入 MCP 配置）",
+      "_LOKI_URL说明": "Loki API 地址，如 http://192.168.3.25:3100；Docker 模式下容器需能访问该地址",
+      "_认证说明": "无需认证可只填 LOKI_URL；多租户/鉴权时按需设置 LOKI_ORG_ID、LOKI_TOKEN 或 LOKI_USERNAME/LOKI_PASSWORD",
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "-e",
+        "LOKI_URL",
+        "-e",
+        "LOKI_ORG_ID",
+        "-e",
+        "LOKI_USERNAME",
+        "-e",
+        "LOKI_PASSWORD",
+        "-e",
+        "LOKI_TOKEN",
+        "loki-mcp-server:latest"
+      ],
       "env": {
         "LOKI_URL": "<YOUR_LOKI_URL>"
       }

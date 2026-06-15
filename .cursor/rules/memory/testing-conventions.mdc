@@ -8,7 +8,8 @@ alwaysApply: false
 
 ## 命名规范
 
-测试方法命名采用 `should_xxx_when_yyy` 格式：
+- **测试类命名** — 被测类名 + `Test`（如 `OrderServiceTest`），对齐阿里巴巴手册
+- **测试方法命名** — 项目内可用 `should_xxx_when_yyy` 或 `testXxx` 风格，须语义清晰
 
 ```java
 @Test

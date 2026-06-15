@@ -18,6 +18,7 @@
 - 代码变更（`git diff` 或 `change-manifest.md` 中列出的文件）
 - `docs/artifacts/lld.md` — 详细设计，作为"代码应该怎么写"的参照
 - `docs/artifacts/decision-log.md` — 用户决策记录，确保变更不违背决策
+- `coding-standards-loader.mdc` — 开始前读取，按「代码审查」场景及变更涉及的其他场景加载并遵守对应规则
 
 ### 参考
 - `docs/artifacts/api-contract.md` — API 契约，校验接口实现
@@ -45,10 +46,10 @@
 - 数据迁移是否安全可回滚
 
 ### 维度三：编码规范
-- 命名是否符合 `rules/memory/naming-conventions.mdc`
-- 方法设计是否符合 `rules/memory/method-design.mdc`（长度、参数数量、职责单一）
-- 异常处理是否符合 `rules/memory/exception-handling.mdc`
-- 日志使用是否符合 `rules/memory/logging.mdc`
+- 命名是否符合命名规范（类/方法/变量/常量）
+- 方法设计是否符合规范（长度、参数数量、职责单一）
+- 异常处理是否符合规范（捕获粒度、错误码、不吞异常）
+- 日志使用是否符合规范（级别、格式、敏感信息脱敏）
 - 注释是否合理（不冗余、解释"为什么"而非"是什么"）
 - 代码格式是否一致（缩进、空行、花括号风格）
 

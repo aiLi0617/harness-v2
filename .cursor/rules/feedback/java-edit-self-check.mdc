@@ -6,6 +6,8 @@ alwaysApply: true
 
 # Java 编辑后自检门禁
 
+> 本门禁只管**流程**（何时检、怎么检、怎么报告），不管规范条文。具体标准在 loader 已加载的 memory 规则中；禁止在本文件重复列举注释/判空等细则。
+
 > 解决"改 Java 时跳过规则、按当前类风格盲写"的顽疾。本门禁是 `.java` 文件变更的**第一道**质量闸口,先于 `compilation-guard` / `lint-guard` / `test-guard`。
 
 ## 触发时机
@@ -19,45 +21,49 @@ alwaysApply: true
 
 ## 强制流程
 
-1. **加载规则**:本次会话首次修改 `.java` 时,必须先用 Read 工具读取 `coding-standards-loader.mdc` 映射表中"编写/修改 Java 代码"对应的全部 `.mdc` 文件,已读过的不必重复
-2. **逐点自检**:对本次新增/修改的**每一个**类、方法、字段(含 `private`、`helper`、`@Override`),按下方"自检清单"逐条核对
-3. **修复闭环**:任一条不通过 → 立即修复 → 重新自检该项 → 通过后才能继续
-4. **输出报告**:以本文末尾的"自检报告格式"显式输出(**不输出视为未自检,等同失败**)
+1. **识别变更**:列出本次新增/修改的 `.java` 文件及变更点(类/方法/字段,含 `private`、helper、`@Override`)
+2. **匹配场景**:按下方「场景识别」为每个变更文件判定 loader 场景(可叠加多个)
+3. **加载规则**:读取 `coding-standards-loader.mdc`,合并所有命中场景对应的规则文件并 Read;同一会话已读过的不重复 Read
+4. **对照自检**:仅针对**本次变更点**,逐条对照**已加载规则**中的约束核对;规范细节以已加载文件为准,不得凭记忆或当前类既有风格
+5. **修复闭环**:任一条不通过 → 立即修复 → 重新自检该项 → 通过后才能继续
+6. **输出报告**:按「自检报告格式」为每个变更文件输出一段(**不输出视为未自检,等同失败**)
 
-## 自检清单
+## 场景识别
 
-每条必须给出 ✅ / ❌ / N/A + 一句依据,不允许只打勾不写依据。
+> 场景名称与 `coding-standards-loader.mdc` 场景表一致。多个条件命中时**全部叠加**。
 
-### 注释(依据:`memory/comment-conventions.mdc`)
+| 判定依据 | 命中场景 |
+|---|---|
+| 任意 `.java` 变更 | 编写/修改 Java 代码 |
+| 路径含 `*Controller*`、`*Api*`(对外接口层) | 涉及 API/Controller |
+| 路径含 `*Mapper*`、`*DO.java`、Entity/Model 包,或变更含 SQL/持久化 | 涉及数据库/Entity/Mapper |
+| 路径含 `*Redis*`、`RedisKeyConstants`、`*RedisDAO*` | 涉及 Redis 缓存 |
+| 路径含 `*Mq*`、`*MQ*`、`*Message*`、`*Consumer*`、`*Producer*` | 涉及多租户/…/MQ 或三方回调接入 |
+| 变更含 `tenantId`、`ignore-urls`、`ignore-tables`、跨租户逻辑 | 涉及多租户/…/MQ 或三方回调接入 |
+| 路径或变更含 `*Test.java`、测试目录 | 涉及测试代码 |
+| 变更含 `LocalDate`、`LocalDateTime`、时区、时间戳处理 | 涉及日期时间处理 |
+| 变更含线程、锁、并发、异步 | 涉及并发/多线程 |
+| 变更含大量日志、`log.` 调用 | 涉及日志 |
+| 变更涉及 DTO/VO/Entity 类定义 | 涉及 DTO/VO/Entity 设计 |
+| 路径含 `*Obs*`、上传/下载/OSS 相关 | 涉及 OBS/对象存储/文件上传下载 |
 
-- 新增的所有方法(含 `private`,**不含 `@Override`**)是否使用了模板 Javadoc,并齐备 `@Description / @params / @return / @author / @date / @version` 与分隔线?
-- `@Override` 方法是否未添加 Javadoc?
-- 新增的 `public` 类/接口/枚举是否有类注释模板?
-- `@author` 是否取自 `git config user.name`?`@date` 是否为 `yyyy年MM月dd日 HH:mm` 格式?
-- 多步流程(≥3 步)是否使用编号式行注释(`// 1. xxx` / `// 2. xxx`)?
-- 行注释是否在写"为什么"而非复述代码?
+未命中上表但变更明显属于 loader 其他场景(如应用安全、项目结构)时,须主动纳入对应场景并加载规则。
 
-### 判空与 Null 安全(依据:`memory/null-safety.mdc`)
+## 自检方式
 
-- 本次新增/修改代码中是否**完全没有** `== null` / `!= null`?所有判空是否用 `Objects.isNull / Objects.nonNull / ObjectUtil.isNull / CollUtil.isEmpty` 等工具方法?
-- `equals` 是否"常量在前"或使用 `Objects.equals`?
-- 集合返回是否避免 `null`(用 `Collections.emptyList()` 等)?
-
-### 通用规范(依据见各文件)
-
-- 命名是否符合 `naming-conventions`?
-- 方法是否符合 `method-design`(单一职责、参数数量、长度)?
-- 异常处理是否符合 `exception-handling`?
-- 集合操作是否符合 `collection-handling`?
-- 涉及日志/并发/日期/数据库/API/POJO 时是否对照对应 `memory/*.mdc` 自检?
+- 每个**已加载规则文件**对应报告中的一个**规则域**一行,不得合并为「其他」一笔带过
+- 某规则域与本次变更无关 → 该行标 **N/A** 并一句说明(如「本次未改持久化逻辑」)
+- 每条 ✅/❌/N/A 须有一句**可核对依据**(引用已加载规则中的具体要求或变更代码位置)
+- `java-edit-self-check` 自身不参与「规则域」自检行(本文件是流程门禁)
 
 ## 禁止行为
 
-- ❌ **禁止以"按当前类风格"作为跳过自检的依据** —— 已有代码若违反规则,须一并修正或在 `decision-log.md` 记录技术债,不得作为新代码的模板
+- ❌ **禁止以"按当前类风格"作为跳过自检的依据** —— 已有代码若违反已加载规则,须一并修正或在 `docs/artifacts/decision-log.md` 记录技术债,不得作为新代码的模板
 - ❌ **禁止"等全部改完再统一自检"** —— 每个 `.java` 文件改完一处就自检一次
 - ❌ **禁止只自检"主要方法"** —— 含 `private`、helper、内部类的所有变更点
 - ❌ **禁止以"小改动"为由跳过本门禁** —— 哪怕只新增一个 `private` 方法也必须自检
 - ❌ **禁止以"会话已加载过规则"为由跳过自检报告输出** —— 报告本身是可观测信号
+- ❌ **禁止在本门禁中硬编码规范条文** —— 注释/判空/命名等细则只存在于已加载的 memory 规则
 
 ## 自检报告格式
 
@@ -66,11 +72,29 @@ alwaysApply: true
 ```
 [Java 自检] <文件路径>
 变更点: <类名/方法名列表>
-- 注释: ✅/❌ <依据>
-- 判空: ✅/❌ <依据>
-- 命名/方法/异常/集合: ✅/❌ <依据>
-- 其他场景规范: ✅/❌/N/A <依据>
+命中场景: <场景1>, <场景2>, ...
+已加载规则域:
+- <规则文件名/领域名>: ✅/❌/N/A <一句依据>
+- <规则文件名/领域名>: ✅/❌/N/A <一句依据>
+- ...（每个已加载规则文件一行,不得遗漏）
 结论: 通过 | 已修复后通过 | 待用户确认
+```
+
+示例(仅说明动态行数,非固定模板):
+
+```
+[Java 自检] OrderController.java
+变更点: OrderController.createOrder
+命中场景: 编写/修改 Java 代码, 涉及 API/Controller
+已加载规则域:
+- comment-conventions: ✅ 新增 private 方法均有完整 Javadoc 模板
+- null-safety: ✅ 无 == null, 均用 Objects.isNull
+- naming-conventions: ✅
+- method-design: ❌ 参数 4 个未封装 → 已改为 CreateOrderRequest
+- api-design: ✅ RESTful POST, PageResult 未误用
+- security-conventions: ✅ 入参校验与权限注解已加
+- ...（其余已加载项各一行）
+结论: 已修复后通过
 ```
 
 ## 与其他门禁的关系

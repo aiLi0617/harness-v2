@@ -35,6 +35,6 @@ alwaysApply: false
 | TINYINT(1) | Boolean |
 | BIT(1) | Boolean |
 
-## 项目特定规则
+## 补充规则
 
-- **[来源: 用户纠正 2026-04-21]** ⚠️ 删除 / 下沉 Entity 物理字段前，必须对所有 `getXxx()` / `setXxx()` 调用点做全局 Grep，**逐个调用点标注读写影响**（新数据读到 NULL 是否有业务副作用）。若影响面超出当前任务切片范围，必须在 `decision-log.md` 显式选择「回退字段删除」或「标注过渡期 NULL 行为并在后续切片修复」，禁止默默删字段导致下游静默读 NULL
+- ⚠️ 删除 / 下沉 Entity 物理字段前，必须对所有 `getXxx()` / `setXxx()` 调用点做全局 Grep，**逐个调用点标注读写影响**（新数据读到 NULL 是否有业务副作用）。若影响面超出当前任务切片范围，必须在 `docs/artifacts/decision-log.md` 显式选择「回退字段删除」或「标注过渡期 NULL 行为并在后续切片修复」，禁止默默删字段导致下游静默读 NULL

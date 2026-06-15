@@ -24,6 +24,7 @@ alwaysApply: false
 | `ones-mcp` | ONES 缺陷管理（查询/更新缺陷） | `bugfix/ones-loki-trace-investigator`、`bugfix/bug-analyst`（可选） | bugfix |
 | `feishu-mcp` | 飞书 API（云文档发布、消息通知） | `feature/hld-to-feishu`、`feature/lld-to-feishu` | feature-delivery |
 | `chrome-devtools-mcp` | 浏览器调试（页面检查、网络请求） | 按需 | 通用 |
+| `codegraph-mcp` | 本地代码知识图谱（符号搜索/调用链/影响分析） | 按需 | 通用 |
 | `loki-mcp` | Loki 日志查询（LogQL） | `bugfix/ones-loki-trace-investigator` | bugfix |
 
 ### 环境 MCP（模板中用 `dev-` 示例，按实际环境调整）
@@ -38,9 +39,9 @@ alwaysApply: false
 
 | 工作流 | 必需 | 可选 |
 |--------|------|------|
-| bugfix | `ones-mcp`（涉及 ONES 缺陷时） | `loki-mcp`、`{env}-mysql-mcp` |
-| refactoring | — | `{env}-mysql-mcp` |
-| feature-delivery | `feishu-mcp`（飞书发布时） | `{env}-mysql-mcp`、`{env}-swagger-mcp` |
+| bugfix | `ones-mcp`（涉及 ONES 缺陷时） | `codegraph-mcp`、`loki-mcp`、`{env}-mysql-mcp` |
+| refactoring | — | `codegraph-mcp`、`{env}-mysql-mcp` |
+| feature-delivery | `feishu-mcp`（飞书发布时） | `codegraph-mcp`、`{env}-mysql-mcp`、`{env}-swagger-mcp` |
 
 ## 代理引用规范
 

@@ -34,7 +34,16 @@ alwaysApply: false
 - 跨模块调用通过 Service 接口，禁止直接访问其他模块的 Mapper
 - 有其他方案存在，绝对不可以使用递归
 
-## 项目特定规则
+## 服务器与运行时（阿里巴巴手册 · 工程结构）
 
-- **[来源: 用户纠正 2026-04-16]** Orch 编排层尽量避免出现业务判断、数据计算、状态流转等逻辑，应下沉到 BIZ 层
-- **[来源: 用户纠正 2026-04-17]** 三层职责澄清：①Orch Service 是编排层，尽量将逻辑下沉到 BIZ，目的是减少 Feign 调用次数和 Orch 服务压力（并非所有逻辑都必须下沉，简单逻辑且不增加 Feign 调用的可保留）；②API Service 是纯中转层，严禁包含编排或业务逻辑；③BIZ Service 内部尽量减少 Service 之间的相互调用
+- **【强制】远程调用必须设置超时** — HttpClient、Feign、RPC 等须明确 Timeout
+- **【推荐】** 超时生效顺序：客户端 Special Method → 客户端接口 → 服务端 Special Method → 服务端接口
+- **【推荐】** 高并发可调小 TCP `time_wait`；调大最大文件句柄数
+- **【推荐】** JVM 加 `-XX:+HeapDumpOnOutOfMemoryError`；**Xms 与 Xmx 设相同**
+- **【推荐】** 慢服务独立线程池，避免拖垮主线程池
+- **【参考】** 内部重定向用 forward；外部重定向 URL 须统一代理生成（HTTPS 一致）
+
+## 补充规则
+
+- Orch 编排层尽量避免出现业务判断、数据计算、状态流转等逻辑，应下沉到 BIZ 层
+- 三层职责澄清：①Orch Service 是编排层，尽量将逻辑下沉到 BIZ，目的是减少 Feign 调用次数和 Orch 服务压力（并非所有逻辑都必须下沉，简单逻辑且不增加 Feign 调用的可保留）；②API Service 是纯中转层，严禁包含编排或业务逻辑；③BIZ Service 内部尽量减少 Service 之间的相互调用

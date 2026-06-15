@@ -54,6 +54,11 @@
 - [ ] 用户输入有校验，无 XSS/注入向量
 - **失败处理**：回退给 implementer 修复安全问题（阻塞级别）
 
+### 第八关：规则交叉引用检查（仅当变更含 `.cursor/rules/**/*.mdc` 时）
+- [ ] 运行检查脚本通过（Windows: `.cursor/scripts/check-rule-cross-refs.ps1`；macOS/Linux: `bash .cursor/scripts/check-rule-cross-refs.sh`）
+- [ ] 新增规则已在 `coding-standards-loader.mdc` 场景表登记（如需组合加载）
+- **失败处理**：移除叶子规则中的跨文件引用，或改在 loader 场景表并列加载
+
 ## 输出
 
 验证通过时：
@@ -77,11 +82,7 @@
 ```
 
 ## 与 feedback 层规则的关系
-本技能负责**编排何时检查、按什么顺序检查**；具体的检查标准由 `rules/feedback/` 下的门禁规则定义：
-- `compilation-guard.mdc` → 编译检查的具体标准
-- `test-guard.mdc` → 测试检查的具体标准
-- `lint-guard.mdc` → Lint 检查的具体标准
-- `change-scope-guard.mdc` → 变更范围的具体标准
+本技能负责**编排何时检查、按什么顺序检查**；具体的检查标准由 feedback 层门禁规则定义（compilation-guard、test-guard、lint-guard、change-scope-guard，通过 loader 或 alwaysApply 自动加载）。
 
 ## 关键约束
 - 检查顺序固定，前序关卡未通过时不执行后续关卡（快速失败）
