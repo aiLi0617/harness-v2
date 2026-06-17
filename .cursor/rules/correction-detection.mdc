@@ -1,0 +1,81 @@
+﻿---
+description: 纠正检测与规则自动沉淀
+globs: 
+alwaysApply: true
+---
+
+# 纠正检测
+
+## 监听信号
+
+检测用户消息中的纠正信号关键词：
+
+- "我说过"、"又犯了"、"之前提过"、"第N次了"
+- "不是这样"、"我之前说过"、"你又..."、"重复了"
+
+## 触发条件
+
+当检测到**同类错误第 2 次及以上**时，触发规则沉淀流程。
+
+## 规则沉淀流程
+
+1. 提取纠正内容，概括为一条明确的规则
+2. 根据分类映射表确定目标文件
+3. 将规则追加到对应 `.mdc` 文件的末尾（在 `## 补充规则` 章节下）
+
+## 分类映射表
+
+> 分类与 `rules-loader.mdc` 场景表、`agents/memory-consolidator.md` 分类表保持一致,三处任一处新增分类时必须同步更新。
+> 自 2026-06 起 `.cursor/rules/` 已扁平化，目标文件直接以文件名引用，不带 `memory/`、`feedback/`、`orchestration/`、`execution/` 前缀。
+
+| 纠正类别 | 目标文件 |
+|----------|---------|
+| 命名 | `naming.mdc` |
+| 枚举类型设计 | `enums.mdc` |
+| 常量组织/魔法值 | `constants.mdc` |
+| 异常处理 | `exceptions.mdc` |
+| 日志 | `logging.mdc` |
+| 空值 | `null-safety.mdc` |
+| 方法设计 | `method-design.mdc` |
+| 注释 | `comments.mdc` |
+| 数据库 | `database.mdc` |
+| API | `api-design.mdc` |
+| 错误码 | `error-codes.mdc` |
+| 设计规约 | `design-doc.mdc` |
+| 测试 | `testing.mdc` |
+| 集合处理 | `collections.mdc` |
+| 并发处理 | `concurrency.mdc` |
+| 日期时间 | `datetime.mdc` |
+| POJO 字段定义 | `pojo.mdc` |
+| OOP/继承/访问控制/equals | `oop.mdc` |
+| 数值类型/BigDecimal/浮点 | `numeric.mdc` |
+| 依赖管理 | `dependencies.mdc` |
+| 项目架构/分层 | `project-architecture.mdc` |
+| 微服务/模块规划 | `microservice.mdc` |
+| 应用安全 | `security.mdc` |
+| Redis 缓存 | `redis.mdc` |
+| OBS/对象存储 | `obs.mdc` |
+| 代码格式 | `code-style-format.mdc` |
+| 控制语句 | `control-flow.mdc` |
+| 消息队列 | `message-queue.mdc` |
+| ORM/MyBatis | `mybatis.mdc` |
+| 多租户隔离 | `tenant-isolation.mdc` |
+| Schema/Entity 一致性 | `schema-guard.mdc` |
+| Java 编辑自检 | `java-edit-self-check.mdc` |
+| Git 分支 | `git-branch.mdc` |
+| Git 提交 | `git-commit.mdc` |
+| 变更实施流程 | `change-implementation.mdc` |
+| 任务拆解 | `task-decomposition.mdc` |
+| 阶段契约 | `stage-contracts.mdc` |
+| MCP 配置/引用 | `mcp.mdc` |
+| ER 图绘制 | `er-diagram.mdc` |
+| 规则交叉引用 | `cross-ref-guard.mdc` |
+| 无法归类 | 新建 `<topic>.mdc` |
+
+## 规则写入格式
+
+```markdown
+## 补充规则
+
+- 规则描述
+```

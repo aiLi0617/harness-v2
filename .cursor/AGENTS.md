@@ -1,18 +1,22 @@
-# Harness 工程 - 顶层代理指令
+﻿# Harness 工程 - 顶层代理指令
 
 ## 架构概述
 
 本项目采用 Harness 三工作流渐进体系，所有 AI 代理必须遵守以下架构：
 
-- **Rules**（`.cursor/rules/`）：按四层分类的被动规则，自动加载
-  - 记忆层（`memory/`）：项目知识与编码规范，26 个规则
-  - 编排层（`orchestration/`）：工作流与任务管理，6 个规则
-  - 反馈层（`feedback/`）：门禁守卫与质量保障，8 个规则
-  - 执行层（`execution/`）：操作权限与安全边界，2 个规则
-- **Skills**（`.cursor/skills/`）：按工作流分组的主动技能，按需调用
-- **Agents**（`.cursor/agents/`）：按工作流分组的子代理，由工作流调度
-- **Workflows**（`.cursor/workflows/`）：三个工作流的 YAML 编排定义
+- **Rules**（`.cursor/rules/`）：被动规则，自动加载；自 2026-06 起已扁平化（无 `memory/`、`feedback/`、`orchestration/`、`execution/` 子目录），所有 `.mdc` 直接位于 `rules/` 根。原四层分类仅保留为语义标签，不再体现在目录结构中：
+  - 记忆层（编码规范，约 28 条）
+  - 编排层（工作流与任务管理，约 6 条）
+  - 反馈层（门禁守卫与质量保障，约 9 条）
+  - 执行层（操作权限与安全边界，2 条）
+- **Skills**（`.cursor/skills/`）：主动技能，按需调用；自 2026-06 起已扁平化（无 `bugfix/`、`feature/`、`refactoring/`、`shared/` 子目录），每个 skill 直接位于 `skills/<skill-name>/SKILL.md`
+- **Agents**（`.cursor/agents/`）：子代理，由工作流调度；自 2026-06 起已扁平化（无 `bugfix/`、`feature/`、`refactoring/`、`shared/` 子目录），每个 agent 直接位于 `agents/<agent-name>.md`。原四类分组仅保留为语义标签，不再体现在目录结构中
+- **Workflows**（`.cursor/workflows/`）：三个工作流的 YAML 编排定义；`feature-delivery` 进一步按最小阶段拆到 `workflows/feature-delivery/phase-*.yaml`，由 `feature-delivery.yaml` 作为编排索引按顺序引用
 - **MCP**（`.cursor/mcp/mcp-template.json`）：MCP 服务配置模板，项目级管理
+- **Scripts**（`.cursor/scripts/`）：校验/初始化脚本（如 `check-rule-cross-refs.ps1` / `.sh`）
+- **Plugins**（`.cursor/plugins/feature-list.md`）：第三方插件安装清单
+
+> **项目特化资源**：harness 内置通用层全部扁平化直接挂在 `rules/`、`skills/`、`agents/` 根；针对单个业务项目的定制化规则/技能/代理统一收纳于各资源目录下的 `projects/<project>/` 子目录（按"作用域"分组，内部仍扁平），通过文件名 `<project>-` 前缀与 `globs` 共同锁定生效范围。详见 `rules-loader.mdc` 「项目特化规则加载约定」。
 
 ## 核心原则
 
@@ -34,12 +38,10 @@
 
 | 资源类型 | 使用的资源 |
 |---------|-----------|
-| Agents | `shared/implementer` `shared/code-reviewer` `shared/memory-consolidator` `bugfix/bug-analyst` `bugfix/ones-loki-trace-investigator` |
-| Skills | `shared/harness-debug-logger`（全局） `shared/verification-before-completion` `bugfix/systematic-debugging` `bugfix/test-driven-bugfix` |
-| Rules | memory: exception-handling, null-safety, logging, mcp-conventions |
-| | orchestration: git-branch, git-commit（+ always: coding-standards-loader, stage-contracts） |
-| | feedback: compilation-guard, lint-guard, test-guard, correction-detection, human-checkpoint（+ always: java-edit-self-check） |
-| | execution: execution-boundary, environment-boundary |
+| Agents | `agents/implementer` `agents/code-reviewer` `agents/memory-consolidator` `agents/bug-analyst` `agents/ones-issue-fetcher` `agents/loki-log-investigator` |
+| Skills | `skills/harness-debug-logger`（全局） `skills/done-verify` `skills/systematic-debug` `skills/tdd-bugfix` |
+| Rules（按文件名引用，已扁平化） | always: `rules-loader` `stage-contracts` `correction-detection` `human-checkpoint` `java-edit-self-check` |
+| | active: `exceptions` `null-safety` `logging` `git-branch` `git-commit` `compile-guard` `lint-guard` `test-guard` `execution-boundary` `environment-boundary` |
 | MCP | `ones-mcp`（涉及 ONES 缺陷时必需）、`loki-mcp`（可选，日志查询） |
 
 ### 工作流 2：代码重构（扩展 Bug 修复）
@@ -50,15 +52,13 @@
 触发 → 代码分析 → 制定方案 → 逐步重构 → 回归验证 → 质量审查 → 通用审查 → 验证 → 归档
 ```
 
-继承 Bug 修复的全部资源（含 `shared/memory-consolidator`、`shared/harness-debug-logger`），新增：
+继承 Bug 修复的全部资源（含 `agents/memory-consolidator`、`skills/harness-debug-logger`），新增：
 
 | 资源类型 | 新增资源 |
 |---------|---------|
-| Agents | `refactoring/refactoring-planner` `refactoring/code-quality-reviewer` |
-| Skills | `refactoring/refactoring-planning` `refactoring/safe-refactoring`（`shared/code-generation-guardian` 由 implementer 按需调用） |
-| Rules | memory: + method-design, naming-conventions, comment-conventions |
-| | orchestration: + change-implementation |
-| | feedback: + change-scope-guard |
+| Agents | `agents/refactoring-planner` `agents/code-quality-reviewer` |
+| Skills | `skills/refactor-plan` `skills/safe-refactoring`（`skills/codegen-guard` 由 implementer 按需调用） |
+| Rules（增量） | active: + `method-design` `naming` `comments` `change-implementation` `scope-guard` |
 
 ### 工作流 3：PRD 到测试（完整流程）
 
@@ -72,11 +72,9 @@
 
 | 资源类型 | 新增资源 |
 |---------|---------|
-| Agents | `feature/prd-feature-split` `feature/architect-hld` `feature/lld-author` `feature/implementation-planner` `feature/db-ddl` `feature/api-contract` `feature/spec-reviewer` `shared/consistency-reviewer` |
-| Skills | `feature/brainstorming` `feature/writing-plans` `feature/feature-delivery-workflow` `feature/hld-to-feishu` `feature/lld-to-feishu` `shared/code-generation-guardian` |
-| Rules | memory: 全部 26 条激活（含 tenant-isolation, mcp-conventions, microservice-conventions 等） |
-| | orchestration: + task-decomposition |
-| | feedback: + schema-guard |
+| Agents | `agents/prd-splitter` `agents/architect-hld` `agents/lld-author` `agents/impl-planner` `agents/db-ddl` `agents/api-contract` `agents/spec-reviewer` `agents/consistency-reviewer` |
+| Skills | `skills/brainstorming` `skills/writing-plans` `skills/feature-delivery-workflow` `skills/hld-to-feishu` `skills/lld-to-feishu` `skills/codegen-guard` |
+| Rules（增量） | active: 原记忆层 28 条全部激活（含 `tenant-isolation` `mcp` `microservice` 等）+ `task-decomposition` `schema-guard` |
 | MCP | `feishu-mcp`（飞书云文档发布时必需）、`{env}-mysql-mcp`（涉及 DB 时）、`{env}-swagger-mcp`（可选） |
 
 完整审查链：
@@ -91,19 +89,21 @@
 
 | 制品 | 产出者 | 消费者 |
 |------|--------|--------|
-| `prd-source.md` | 云文档导入（可选） | prd-feature-split |
+| `prd-source.md` | 云文档导入（可选） | prd-splitter |
 | `feishu-doc-links.md` | hld-to-feishu / lld-to-feishu | 后续更新/用户参考 |
-| `feature-list.md` | prd-feature-split | brainstorming, architect-hld |
+| `feature-list.md` | prd-splitter | brainstorming, architect-hld |
 | `brainstorm-result.md` | brainstorming | architect-hld |
 | `hld.md` | architect-hld | db-ddl, api-contract, lld-author |
 | `ddl.md` | db-ddl | lld-author |
 | `api-contract.md` | api-contract | lld-author |
-| `lld.md` | lld-author | implementation-planner, spec-reviewer |
-| `impl-plan.md` | implementation-planner | implementer |
-| `root-cause.md` | bug-analyst / ones-loki-trace-investigator | implementer |
+| `lld.md` | lld-author | impl-planner, spec-reviewer |
+| `impl-plan.md` | impl-planner | implementer |
+| `root-cause.md` | bug-analyst | implementer |
+| `issue-context-{key}.md` | ones-issue-fetcher | loki-log-investigator / bug-analyst |
+| `root-cause-loki-{key}.md` | loki-log-investigator | implementer / bug-analyst |
 | `decision-log.md` | human-checkpoint | 所有下游子代理 |
 | `harness-debug.md` | harness-debug-logger | 用户调试 |
-| `verification-report.md` | verification-before-completion | 用户审阅 |
+| `verification-report.md` | done-verify | 用户审阅 |
 
 **每个子代理的 prompt 必须包含**：
 1. "开始前先读取上游制品文件"
@@ -121,14 +121,14 @@
 
 ## 人工检查点
 
-遇到以下情况必须暂停问用户（`feedback/human-checkpoint.mdc`）：
+遇到以下情况必须暂停问用户（`human-checkpoint.mdc`）：
 - 需求模糊、方案抉择、风险操作、超出范围、假设不确定
 
 每次问答记录到 `docs/artifacts/decision-log.md`。
 
 ## 记忆固化
 
-当用户重复纠正同类错误时（`feedback/correction-detection.mdc`），调度 `memory-consolidator` 子代理将纠正写入对应的 `.mdc` 规则文件。
+当用户重复纠正同类错误时（`correction-detection.mdc`），调度 `memory-consolidator` 子代理将纠正写入对应的 `.mdc` 规则文件。
 
 ## 制品归档
 
@@ -136,14 +136,14 @@
 
 ## 规则优先级
 
-当规则冲突时，按以下优先级：
-1. `execution/` — 安全红线最高
-2. `feedback/` — 门禁守卫其次
-3. `orchestration/` — 工作流规则
-4. `memory/` — 编码规范
+当规则冲突时，按以下语义层级优先级（不再对应目录结构，仅作约束语义参考）：
+1. 执行层（`execution-boundary.mdc` `environment-boundary.mdc`）— 安全红线最高
+2. 反馈层（`*-guard.mdc` `correction-detection` `human-checkpoint` 等）— 门禁守卫其次
+3. 编排层（`git-*` `change-implementation` `task-decomposition` `stage-contracts` `rules-loader`）— 工作流规则
+4. 记忆层（其余编码规范类 `.mdc`）— 编码规范
 
 ## 规则加载原则
 
 - **规则文件互不引用** — 每条规则自描述本领域约束，正文不写「见 xxx.mdc」
-- **路由层负责组合** — 场景到规则的映射由 `coding-standards-loader.mdc`、workflow YAML、globs 决定
-- **Agents/Skills 通过 loader 发现规则** — 不硬编码 `rules/memory/` 路径（`memory-consolidator` 纠正写入路由除外）
+- **路由层负责组合** — 场景到规则的映射由 `rules-loader.mdc`、workflow YAML、globs 决定
+- **Agents/Skills 通过 loader 发现规则** — 不硬编码 `rules/<file>.mdc` 路径（`memory-consolidator` 纠正写入路由除外）

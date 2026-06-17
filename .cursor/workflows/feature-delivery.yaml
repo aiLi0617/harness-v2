@@ -1,10 +1,37 @@
-# 本文件为工作流参考定义，由 feature-delivery-workflow SKILL 按步骤编排执行。
+# 本文件为 feature-delivery 工作流的「编排索引」，由 feature-delivery-workflow SKILL 按 phases 顺序逐个执行各阶段文件。
+# 每个阶段的具体步骤拆分到 workflows/feature-delivery/phase-*.yaml，按最小可交付单元组织。
 # Cursor IDE 不自动解析此 YAML。
 name: feature-delivery
 description: 完整功能交付流水线（继承重构全部 + 功能交付专属能力）
 debug: true
 global_skills:
-  - skills/shared/harness-debug-logger
+  - skills/harness-debug-logger
+
+# 阶段编排：按顺序执行，每个阶段是一个独立的最小工作流文件。
+# rules / agents / global_skills 由本文件统一声明，各阶段文件继承。
+#
+# 灵活入口（支持中途进入）：可指定任意阶段作为起点。进入前检查该阶段的 entry_artifacts：
+#   - 全部存在  → 按顺序从该阶段继续执行（无需询问）
+#   - 存在缺失  → 暂停询问用户：A 补齐上游后按顺序处理 / B 就地从当前阶段开始
+# 详见 skills/feature-delivery-workflow/SKILL.md「灵活入口协议」。
+entry_mode: flexible  # flexible=支持中途进入并在缺输入时询问；strict=缺输入即停止
+phases:
+  - file: workflows/feature-delivery/phase-1-prd-split.yaml
+    description: PRD 功能拆分（含可选 PRD 导入）
+  - file: workflows/feature-delivery/phase-2-brainstorm.yaml
+    description: 需求方案头脑风暴
+  - file: workflows/feature-delivery/phase-3-hld.yaml
+    description: 概要设计 → HLD 一致性审查 → 发布飞书
+  - file: workflows/feature-delivery/phase-4-db-api.yaml
+    description: 数据库设计 → API 契约设计（可并行）
+  - file: workflows/feature-delivery/phase-5-lld.yaml
+    description: 详细设计 → LLD 一致性审查 → 发布飞书
+  - file: workflows/feature-delivery/phase-6-plan.yaml
+    description: 实现计划
+  - file: workflows/feature-delivery/phase-7-code.yaml
+    description: 编码实现 → 规格审查 → 质量审查 → 通用审查
+  - file: workflows/feature-delivery/phase-8-verify-archive.yaml
+    description: 最终验证 → 制品归档
 
 artifact_chain:
   - step: prd-import
@@ -25,6 +52,9 @@ artifact_chain:
     input:
       - docs/artifacts/feature-list.md
       - docs/artifacts/hld.md
+  - step: hld-publish
+    input: docs/artifacts/hld.md
+    output: docs/artifacts/feishu-doc-links.md
   - step: ddl
     input: docs/artifacts/hld.md
     output: docs/artifacts/ddl.md
@@ -43,218 +73,69 @@ artifact_chain:
       - docs/artifacts/ddl.md
       - docs/artifacts/api-contract.md
       - docs/artifacts/lld.md
+  - step: lld-publish
+    input: docs/artifacts/lld.md
+    output: docs/artifacts/feishu-doc-links.md
   - step: plan
     input: docs/artifacts/lld.md
     output: docs/artifacts/impl-plan.md
   - step: code
     input: docs/artifacts/impl-plan.md
+  - step: verify
+    output: docs/artifacts/verification-report.md
+  - step: archive
+    output: docs/artifacts/archive/{date}-{task}/
 
-steps:
-  - name: prd-import
-    description: PRD 导入（可选）
-    optional: true
-    actions:
-      - 用户指定云文档（飞书文档、Confluence 等）URL 或本地文件路径
-      - 将云文档内容复制到本地 docs/artifacts/prd-source.md
-      - 如用户直接提供口头需求或已有本地文件，跳过此步骤
-
-  - name: prd-split
-    description: PRD 功能拆分
-    agent: agents/feature/prd-feature-split
-    actions:
-      - 读取 docs/artifacts/prd-source.md（如存在）或接收用户口头需求
-      - 拆分为功能点清单，标注优先级和验收标准
-      - 输出到 docs/artifacts/feature-list.md
-
-  - name: brainstorm
-    description: 需求方案头脑风暴
-    skill: skills/feature/brainstorming
-    actions:
-      - 读取 docs/artifacts/feature-list.md
-      - 梳理需求边界和约束
-      - 列出至少 2-3 种技术方案
-      - 对比优劣并输出推荐方案到 docs/artifacts/brainstorm-result.md
-
-  - name: hld
-    description: 概要设计
-    agent: agents/feature/architect-hld
-    actions:
-      - 读取 feature-list.md + brainstorm-result.md
-      - 输出模块划分、接口概览、数据流到 docs/artifacts/hld.md
-
-  - name: consistency-review-1
-    description: HLD 一致性审查
-    agent: agents/shared/consistency-reviewer
-    review_loop:
-      max_rounds: 5
-      on_failure: 回退给 architect-hld 修正
-      on_exhausted: 标记人工介入，暂停流程
-    actions:
-      - 读取 feature-list.md + hld.md
-      - 校验每个功能点是否都有对应模块
-      - 校验 HLD 是否引入了功能清单没有的内容
-
-  - name: hld-publish
-    description: HLD 发布飞书 & 人工确认
-    skill: skills/feature/hld-to-feishu
-    actions:
-      - 将 docs/artifacts/hld.md 发布到飞书云文档
-      - 等待人工审阅确认
-      - 确认通过后继续；需修改则回退给 architect-hld
-
-  - name: ddl
-    description: 数据库设计
-    agent: agents/feature/db-ddl
-    actions:
-      - 读取 hld.md
-      - 输出表结构、索引、约束到 docs/artifacts/ddl.md
-
-  - name: api
-    description: API 契约设计
-    agent: agents/feature/api-contract
-    actions:
-      - 读取 hld.md
-      - 输出接口路径、请求/响应体、状态码到 docs/artifacts/api-contract.md
-
-  - name: lld
-    description: 详细设计
-    agent: agents/feature/lld-author
-    actions:
-      - 读取 hld.md + ddl.md + api-contract.md
-      - 输出类设计、方法签名、业务流程到 docs/artifacts/lld.md
-
-  - name: consistency-review-2
-    description: LLD 一致性审查
-    agent: agents/shared/consistency-reviewer
-    review_loop:
-      max_rounds: 5
-      on_failure: 回退给 lld-author 修正
-      on_exhausted: 标记人工介入，暂停流程
-    actions:
-      - 读取 hld.md + ddl.md + api-contract.md + lld.md
-      - 校验 LLD 类/方法是否覆盖 HLD 所有接口
-      - 校验 DDL 字段与 LLD 实体一致
-      - 校验 API 契约参数与 LLD 方法签名匹配
-
-  - name: lld-publish
-    description: LLD 发布飞书 & 人工确认
-    skill: skills/feature/lld-to-feishu
-    actions:
-      - 将 docs/artifacts/lld.md 发布到飞书云文档
-      - 等待人工审阅确认
-      - 确认通过后继续；需修改则回退给 lld-author
-
-  - name: plan
-    description: 实现计划
-    agent: agents/feature/implementation-planner
-    skill: skills/feature/writing-plans
-    actions:
-      - 读取 lld.md
-      - 拆分子任务、标注依赖、判定可并行项
-      - 输出到 docs/artifacts/impl-plan.md
-
-  - name: code
-    description: 编码实现
-    agent: agents/shared/implementer
-    actions:
-      - 读取 impl-plan.md
-      - 按子任务逐项实现
-      - 每个子任务完成后运行测试
-
-  - name: spec-review
-    description: 规格审查
-    agent: agents/feature/spec-reviewer
-    review_loop:
-      max_rounds: 5
-      on_failure: 回退给 implementer 修复
-      on_exhausted: 标记人工介入，暂停流程
-    actions:
-      - 读取 lld.md + 实际代码
-      - 校验代码是否按 LLD 设计实现
-
-  - name: quality-review
-    description: 质量审查
-    agent: agents/refactoring/code-quality-reviewer
-    review_loop:
-      max_rounds: 5
-      on_failure: 回退给 implementer 修复
-      on_exhausted: 标记人工介入，暂停流程
-
-  - name: code-review
-    description: 通用代码审查
-    agent: agents/shared/code-reviewer
-    review_loop:
-      max_rounds: 5
-      on_failure: 回退给 implementer 修复
-      on_exhausted: 标记人工介入，暂停流程
-
-  - name: verify
-    description: 最终验证
-    skill: skills/shared/verification-before-completion
-    actions:
-      - 编译通过
-      - 测试全绿
-      - Lint 干净
-      - diff 只包含需求相关改动
-
-  - name: archive
-    description: 制品归档
-    actions:
-      - 归档 docs/artifacts/ 到 archive/{date}-{task}/
-
-# 继承 refactoring 全部规则 + 功能交付专属新增
+# 继承 refactoring 全部规则 + 功能交付专属新增；rules/ 已扁平化
 rules:
-  always:  # 全局always规则,所有工作流共享
-    - orchestration/coding-standards-loader
-    - orchestration/stage-contracts
-    - feedback/correction-detection
-    - feedback/human-checkpoint
-    - feedback/java-edit-self-check
-  memory:
-    - exception-handling
+  always:  # 全局 always 规则，所有工作流共享
+    - rules-loader
+    - stage-contracts
+    - correction-detection
+    - human-checkpoint
+    - java-edit-self-check
+  active:
+    - exceptions
     - null-safety
     - logging
     - method-design
-    - naming-conventions
-    - comment-conventions
+    - naming
+    - comments
     - project-architecture
-    - database-conventions
+    - database
     - api-design
-    - testing-conventions
-    - dependency-management
-    - collection-handling
+    - testing
+    - dependencies
+    - collections
     - concurrency
     - datetime
-    - pojo-conventions
+    - pojo
     - tenant-isolation
-  orchestration:
     - git-branch
     - git-commit
     - change-implementation
     - task-decomposition
-  feedback:
-    - compilation-guard
+    - compile-guard
     - lint-guard
     - test-guard
-    - change-scope-guard
+    - scope-guard
     - schema-guard
-  execution:
     - execution-boundary
     - environment-boundary
 
 agents:
   # 继承 refactoring
-  - agents/shared/implementer
-  - agents/shared/code-reviewer
-  - agents/shared/memory-consolidator
-  - agents/shared/consistency-reviewer
-  - agents/refactoring/refactoring-planner
-  - agents/refactoring/code-quality-reviewer
+  - agents/implementer
+  - agents/code-reviewer
+  - agents/memory-consolidator
+  - agents/consistency-reviewer
+  - agents/refactoring-planner
+  - agents/code-quality-reviewer
   # 功能交付专属
-  - agents/feature/prd-feature-split
-  - agents/feature/architect-hld
-  - agents/feature/lld-author
-  - agents/feature/implementation-planner
-  - agents/feature/db-ddl
-  - agents/feature/api-contract
-  - agents/feature/spec-reviewer
+  - agents/prd-splitter
+  - agents/architect-hld
+  - agents/lld-author
+  - agents/impl-planner
+  - agents/db-ddl
+  - agents/api-contract
+  - agents/spec-reviewer

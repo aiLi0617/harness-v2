@@ -1,0 +1,28 @@
+---
+description: broker 业务模块包骨架（api/service/convert/dal/mq/job 包树）约定
+globs:
+  - "**/broker-modules-biz/**/*.java"
+alwaysApply: false
+---
+
+# broker 业务模块包骨架
+
+单领域模块（如 settlement）平铺；多子域模块（operate-user / member-user / agent / user-collect）先按子域再重复下列结构：
+
+```
+com.broker.module.{domain}[.{subdomain}]
+├── api/                       # *ApiImpl（Feign 实现）
+├── service/{entity}/          # XxxService + XxxServiceImpl（无 impl 子包）
+├── convert/{entity}/          # MapStruct XxxConvert
+├── dal/dataobject/{entity}/   # XxxDO
+├── dal/mysql/{entity}/        # XxxMapper
+├── dal/redis/                 # RedisKeyConstants + {entity}/XxxRedisDAO
+├── mq/{message,producer,consumer}/
+└── job/                       # 如有定时任务
+```
+
+- Service 实现类直接放 `service/{entity}/XxxServiceImpl`，**不建** `service/impl/` 子包
+
+## 补充规则
+
+- 新增业务模块时按上述包骨架落位，多子域模块先分子域再重复结构；Service 实现不建 `service/impl/` 子包

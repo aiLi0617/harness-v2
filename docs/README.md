@@ -8,6 +8,8 @@
 | [harness-plan.md](harness-plan.md) | 完整设计方案（三工作流渐进体系详细设计） |
 | [review-checklist.md](review-checklist.md) | AI 产出人工审查清单 |
 | [task-template.md](task-template.md) | 需求拆解模板 |
+| [templates/](templates/) | 文档模板（调试日志 / 决策记录 / 审查清单 / 任务） |
+| [senior-java-interview.md](senior-java-interview.md) | 资深 Java 工程师面试题（技术栈参考资料） |
 
 ## 快速开始
 

@@ -19,96 +19,39 @@ flowchart LR
     refactor -.->|"复用 分析+验证"| feature
 ```
 
-**核心原则**：混合组织——Rules 按四层分类（被动加载，按职责归类），Skills 和 Agents 按工作流分组（主动调度，按场景直觉），Workflows YAML 跨层引用资源。
+**核心原则**：混合组织——Rules 按四层语义归类（被动加载，按职责区分），Skills 和 Agents 按工作流场景分组（主动调度，按场景直觉），Workflows YAML 跨层引用资源。
 
-## 新目录结构
+> **结构现状（自 2026-06）**：`rules/`、`skills/`、`agents/` 三类资源目录已全部**扁平化**，原 `memory/`、`orchestration/`、`feedback/`、`execution/` 以及 `shared/`、`bugfix/`、`refactoring/`、`feature/` 子目录不再存在，仅保留为**语义标签**。下文资源清单中出现的 `shared/xxx`、`feature/xxx` 等前缀均表示"语义归属"，实际路径为 `skills/xxx/SKILL.md`、`agents/xxx.md`。
+
+## 目录结构
 
 ```
 .cursor/
-  rules/                         ← 被动规则，按四层分类，每个文件单一职责
-    memory/                        记忆层：项目知识与编码规范（每项拆最小）
-      project-architecture.mdc       项目架构与分层结构（占位，适配具体项目）
-      naming-conventions.mdc         命名约定（类/方法/变量/常量/包）
-      exception-handling.mdc         异常处理规范（捕获/抛出/自定义异常）
-      logging.mdc                    日志规范（级别/格式/脱敏）
-      null-safety.mdc                Null 安全（Optional/断言/防御性检查）
-      method-design.mdc              方法设计（长度/参数数量/职责单一）
-      comment-conventions.mdc        注释规范（何时注释/禁止冗余注释）
-      database-conventions.mdc       数据库规范（SQL/索引/事务/命名）
-      api-design.mdc                 API 设计规范（URL/状态码/请求响应体）
-      testing-conventions.mdc        测试规范（命名/结构/覆盖率要求）
-      dependency-management.mdc      依赖管理（版本/引入原则）
-      collection-handling.mdc        集合处理规范（判空/遍历/泛型/Map 陷阱）
-      concurrency.mdc                并发处理规范（线程池/锁/ThreadLocal/volatile）
-      datetime.mdc                   日期时间规范（格式化/禁用类/闰年防护）
-      pojo-conventions.mdc           POJO 与 OOP 规范（包装类型/BigDecimal/equals）
-    orchestration/                 编排层：工作流与任务管理（每项拆最小）
-      git-branch.mdc                 Git 分支策略（命名/生命周期/保护）
-      git-commit.mdc                 Git 提交规范（message格式/原子提交）
-      change-implementation.mdc      变更实施规则（先测试再改码/渐进式）
-      task-decomposition.mdc         任务拆解规则（粒度/依赖/可并行判定）
-    feedback/                      反馈层：门禁守卫（每项拆最小）
-      compilation-guard.mdc          编译检查门禁（必须编译通过）
-      lint-guard.mdc                 Lint 检查门禁（无新增 lint 错误）
-      test-guard.mdc                 测试门禁（已有测试全部通过）
-      change-scope-guard.mdc         变更范围门禁（diff 每行追溯到需求）
-      schema-guard.mdc               Schema 一致性门禁（DDL/Entity 对齐）
-      correction-detection.mdc       纠正检测（识别用户重复指出的同类错误，触发记忆固化）
-      human-checkpoint.mdc           人工检查点（遇到不确定时暂停问用户，并记录决策）
-    execution/                     执行层：权限边界（每项拆最小）
-      execution-boundary.mdc         操作红线（文件/目录白名单）
-      environment-boundary.mdc       环境边界（只操作开发环境/禁触生产）
-
-  skills/                        ← 主动技能，按工作流归属分
-    shared/                        共享技能（所有工作流可用）
-      harness-debug-logger/              Harness 全局调试日志
-      verification-before-completion/    完成前验证检查清单
-      using-git-worktrees/               Git Worktree 并行开发
-      code-generation-guardian/          代码生成合规守卫
-    bugfix/                        Bug 修复技能
-      systematic-debugging/              结构化调试流程
-      test-driven-bugfix/                测试驱动修复
-    refactoring/                   重构技能
-      refactoring-planning/              重构方案规划
-      safe-refactoring/                  安全重构执行
-    feature/                       功能交付技能
-      brainstorming/                     需求方案头脑风暴
-      writing-plans/                     设计转实现计划
-      feature-delivery-workflow/         全流程交付编排
-
-  agents/                        ← 子代理，按工作流归属分
-    shared/                        共享代理
-      implementer.md                 代码实现者
-      code-reviewer.md               代码审查者
-      memory-consolidator.md         记忆固化者（检测重复纠正→写入对应规则文件）
-      consistency-reviewer.md        一致性审查（校验上下游制品是否对齐）
-    bugfix/                        Bug 修复代理
-      bug-analyst.md                 Bug 分析师
-    refactoring/                   重构代理
-      refactoring-planner.md         重构规划师
-      code-quality-reviewer.md       代码质量审查
-    feature/                       功能交付代理
-      prd-feature-split.md           PRD 功能拆分
-      architect-hld.md               概要设计
-      lld-author.md                  详细设计
-      implementation-planner.md      实现规划
-      db-ddl.md                      数据库设计（占位）
-      api-contract.md                API 契约（占位）
-      spec-reviewer.md               规格审查
-
+  rules/                         ← 被动规则，全部扁平化直接挂在 rules/ 下（约 49 个，单一职责）
+                                    语义四类：编码规范（约 28）、工作流编排（约 6）、门禁守卫（约 9）、安全边界（2）
+    projects/broker/               broker 项目特化规则（13 个，靠 broker- 前缀 + globs 锁定生效范围）
+  skills/                        ← 主动技能，全部扁平化挂在 skills/<name>/SKILL.md（13 个，每个含 README.md + SKILL.md）
+                                    语义四类：共享（4）、bugfix（2）、refactoring（2）、feature（5）
+  agents/                        ← 子代理，全部扁平化挂在 agents/<name>.md（16 个）
+                                    语义四类：共享（4）、bugfix（3）、refactoring（2）、feature（7）
   workflows/                     ← 工作流编排（跨层引用资源）
     bugfix.yaml                    Bug 修复流水线
     refactoring.yaml               代码重构流水线
-    feature-delivery.yaml          功能交付流水线
+    feature-delivery.yaml          功能交付流水线（编排索引，entry_mode: flexible）
+    feature-delivery/              功能交付的 8 个最小阶段文件 phase-1-prd-split..phase-8-verify-archive
+  scripts/                       ← 校验/初始化脚本（check-rule-cross-refs.ps1 / .sh 等）
+  mcp/mcp-template.json          ← MCP 服务配置模板
+  plugins/feature-list.md        ← 第三方插件安装清单
 
-AGENTS.md                        ← 顶层指令（重写）
+AGENTS.md                        ← 顶层代理指令
 docs/
-  harness-guide.md               ← 更新
-  review-checklist.md            ← 保留
-  task-template.md               ← 保留
-  README.md                      ← 更新
+  harness-guide.md               ← Harness 工程概念与结构说明
+  harness-plan.md                ← 本文件（完整设计方案）
+  review-checklist.md            ← AI 产出人工审查清单
+  task-template.md               ← 需求拆解模板
+  templates/                     ← 文档模板（调试日志 / 决策记录 / 审查清单 / 任务）
   artifacts/                     ← 制品目录（子代理间的交接物）
-    .gitkeep                       保持目录存在，运行时由各阶段子代理写入
+    archive/                       历史制品归档
 ```
 
 ## 三个工作流的具体设计
@@ -121,11 +64,11 @@ docs/
 
 使用资源：
 - **Agents**: `shared/implementer` + `shared/code-reviewer` + `shared/memory-consolidator` + `bugfix/bug-analyst`
-- **Skills**: `shared/verification-before-completion` + `bugfix/systematic-debugging` + `bugfix/test-driven-bugfix`
+- **Skills**: `shared/done-verify` + `bugfix/systematic-debug` + `bugfix/tdd-bugfix`
 - **Rules**:
-  - memory: `exception-handling` + `null-safety` + `logging`（修 bug 最相关的子集）
+  - memory: `exceptions` + `null-safety` + `logging`（修 bug 最相关的子集）
   - orchestration: `git-branch` + `git-commit`
-  - feedback: `compilation-guard` + `lint-guard` + `test-guard`
+  - feedback: `compile-guard` + `lint-guard` + `test-guard`
   - execution: `execution-boundary` + `environment-boundary`
 
 ### 工作流 2：代码重构（refactoring.yaml）
@@ -136,11 +79,11 @@ docs/
 
 使用资源（Bug 修复的全部 + 以下新增）：
 - **Agents**: + `refactoring/refactoring-planner` + `refactoring/code-quality-reviewer`
-- **Skills**: + `refactoring/refactoring-planning` + `refactoring/safe-refactoring`
+- **Skills**: + `refactoring/refactor-plan` + `refactoring/safe-refactoring`
 - **Rules 新增**:
-  - memory: + `method-design` + `naming-conventions` + `comment-conventions`
+  - memory: + `method-design` + `naming` + `comments`
   - orchestration: + `change-implementation`
-  - feedback: + `change-scope-guard`
+  - feedback: + `scope-guard`
 
 ### 工作流 3：PRD 到测试（feature-delivery.yaml）
 
@@ -151,8 +94,8 @@ docs/
 **首步可选**：从飞书等云文档将 PRD 内容复制到 `docs/artifacts/prd-source.md`，后续全程基于本地 md 文件流转。用户直接口头描述需求时可跳过此步骤。
 
 使用资源（重构的全部 + 以下新增）：
-- **Agents**: + `feature/prd-feature-split` + `feature/architect-hld` + `feature/lld-author` + `feature/implementation-planner` + `feature/db-ddl` + `feature/api-contract` + `feature/spec-reviewer` + `shared/consistency-reviewer`
-- **Skills**: + `feature/brainstorming` + `feature/writing-plans` + `feature/feature-delivery-workflow` + `feature/hld-to-feishu` + `feature/lld-to-feishu` + `shared/code-generation-guardian`
+- **Agents**: + `feature/prd-splitter` + `feature/architect-hld` + `feature/lld-author` + `feature/impl-planner` + `feature/db-ddl` + `feature/api-contract` + `feature/spec-reviewer` + `shared/consistency-reviewer`
+- **Skills**: + `feature/brainstorming` + `feature/writing-plans` + `feature/feature-delivery-workflow` + `feature/hld-to-feishu` + `feature/lld-to-feishu` + `shared/codegen-guard`
 
 **完整审查链**（渐进继承 + 新增）：
 1. `consistency-reviewer` — 阶段交接时校验制品对齐（HLD后、LLD后）
@@ -160,7 +103,7 @@ docs/
 3. `code-quality-reviewer` — 继承自重构流程，校验代码质量（坏味道、可维护性）
 4. `code-reviewer` — 继承自 Bug 修复流程，最终审查（正确性、回归、规范）
 - **Rules 新增**:
-  - memory: + `project-architecture` + `database-conventions` + `api-design` + `testing-conventions` + `dependency-management`（全部 memory 规则激活）
+  - memory: + `project-architecture` + `database` + `api-design` + `testing` + `dependencies`（全部 memory 规则激活）
   - orchestration: + `task-decomposition`
   - feedback: + `schema-guard`
 
@@ -194,13 +137,13 @@ docs/
 
 ## [2026-04-16 14:00:06] 规则加载
 - **已激活规则**:
-  - `rules/memory/naming-conventions.mdc`
-  - `rules/memory/exception-handling.mdc`
-  - `rules/orchestration/git-branch.mdc`
-  - `rules/feedback/test-guard.mdc`
-  - `rules/feedback/human-checkpoint.mdc`
-  - `rules/execution/execution-boundary.mdc`
-  - ...（共 21 条）
+  - `rules/naming.mdc`
+  - `rules/exceptions.mdc`
+  - `rules/git-branch.mdc`
+  - `rules/test-guard.mdc`
+  - `rules/human-checkpoint.mdc`
+  - `rules/execution-boundary.mdc`
+  - ...（共 21 条；自 2026-06 起 rules/ 已扁平化）
 
 ---
 
@@ -210,9 +153,9 @@ docs/
 
 ### 冲突 #1 — 内容重叠
 - **类型**: 职责重叠
-- **资源 A**: `skills/shared/verification-before-completion/SKILL.md`
+- **资源 A**: `skills/done-verify/SKILL.md`
   - 定义: "检查编译通过、测试通过、Lint 通过"
-- **资源 B**: `rules/feedback/compilation-guard.mdc` + `rules/feedback/test-guard.mdc` + `rules/feedback/lint-guard.mdc`
+- **资源 B**: `rules/compile-guard.mdc` + `rules/test-guard.mdc` + `rules/lint-guard.mdc`
   - 定义: 分别要求编译通过、测试通过、Lint 通过
 - **重叠内容**: 编译/测试/Lint 检查在技能和规则中都有定义
 - **风险**: 执行两次同样的检查（浪费），或检查标准不一致（一个宽松一个严格）
@@ -220,18 +163,18 @@ docs/
 
 ### 冲突 #2 — 定义矛盾
 - **类型**: 指令冲突
-- **资源 A**: `rules/feedback/change-scope-guard.mdc`
+- **资源 A**: `rules/scope-guard.mdc`
   - 定义: "diff 中每行改动都必须追溯到需求，禁止无关改动"
-- **资源 B**: `skills/refactoring/safe-refactoring/SKILL.md`
+- **资源 B**: `skills/safe-refactoring/SKILL.md`
   - 定义: "每步只做一种重构操作"（重构操作本身不直接追溯到某个需求）
-- **矛盾点**: 重构的改动可能无法逐行追溯到具体需求，但 change-scope-guard 要求必须能追溯
-- **建议**: change-scope-guard 增加例外："重构类变更可追溯到重构计划而非需求"
+- **矛盾点**: 重构的改动可能无法逐行追溯到具体需求，但 scope-guard 要求必须能追溯
+- **建议**: scope-guard 增加例外："重构类变更可追溯到重构计划而非需求"
 
 ---
 
 ## [2026-04-16 14:00:10] 技能调用 — brainstorming
 - **阶段**: 需求分析
-- **技能**: `skills/feature/brainstorming/SKILL.md`
+- **技能**: `skills/brainstorming/SKILL.md`
 - **输入**:
   - PRD 来源: 用户口述 "实现用户注册功能，支持手机号注册"
 - **输出**:
@@ -244,7 +187,7 @@ docs/
 
 ## [2026-04-16 14:05:30] 子代理派发 — architect-hld
 - **阶段**: 概要设计
-- **子代理**: `agents/feature/architect-hld.md`
+- **子代理**: `agents/architect-hld.md`
 - **模式**: 只读
 - **输入**:
   - 读取制品: `docs/artifacts/brainstorm-result.md`
@@ -267,7 +210,7 @@ docs/
 
 ## [2026-04-16 14:15:00] 审查闭环 — consistency-reviewer（第 1 轮）
 - **阶段**: HLD 一致性审查
-- **审查者**: `agents/shared/consistency-reviewer.md`
+- **审查者**: `agents/consistency-reviewer.md`
 - **输入**:
   - `docs/artifacts/feature-list.md`（3 个功能点）
   - `docs/artifacts/hld.md`（4 个模块）
@@ -306,27 +249,27 @@ docs/
 | 类型 | 说明 | 示例 |
 |------|------|------|
 | 职责重叠 | 两个资源对同一件事都有定义，可能执行两次或标准不一致 | VBC 技能和 test-guard 规则都要求"测试通过" |
-| 定义矛盾 | 两个资源对同一件事给出相反的指令 | change-scope-guard 禁止无关改动 vs safe-refactoring 允许重构改动 |
-| 引用缺失 | 某个资源引用了另一个资源，但后者未被激活 | implementer 提到"调用 code-generation-guardian"，但该技能不在当前工作流中 |
+| 定义矛盾 | 两个资源对同一件事给出相反的指令 | scope-guard 禁止无关改动 vs safe-refactoring 允许重构改动 |
+| 引用缺失 | 某个资源引用了另一个资源，但后者未被激活 | implementer 提到"调用 codegen-guard"，但该技能不在当前工作流中 |
 | 覆盖空白 | 工作流的某个阶段没有任何规则/技能覆盖 | bugfix 工作流的"根因分析"阶段没有对应的门禁规则 |
 
 **检测时机**：工作流启动后、第一个步骤执行前
 **输出格式**：每项冲突包含——类型、资源 A 路径+定义摘要、资源 B 路径+定义摘要、冲突点描述、建议处理方式
 **处理方式**：冲突记入日志作为告警，不阻塞流程。用户可根据日志在工作流结束后修正规则/技能定义
 
-**verification-before-completion** — 完成前验证检查清单
+**done-verify** — 完成前验证检查清单
 - **用途**：在任何任务标记"完成"前，强制执行一套检查清单，防止带着遗漏问题交付
 - **触发时机**：任务即将完成时（AI 准备说"已完成"之前）
 - **具体动作**：检查编译是否通过 → 测试是否全绿 → Lint 是否干净 → diff 是否只包含需求相关改动 → 有无遗留 TODO
 - **丢失风险**：低。通过 workflow YAML 在收尾阶段强制调用，不依赖 AI 自觉
 
-**using-git-worktrees** — Git Worktree 并行开发
+**git-worktree** — Git Worktree 并行开发
 - **用途**：当多个子任务可以并行时，用 git worktree 创建隔离的工作目录，避免分支切换冲突
 - **触发时机**：实现计划中识别出 2 个以上可并行子任务时
 - **具体动作**：为每个并行任务创建独立 worktree → 各自在独立分支开发 → 完成后合并回主分支
 - **丢失风险**：中。仅在并行场景需要，如果 AI 未识别出并行机会可能跳过。通过 workflow YAML 在"派发并行任务"步骤显式调用来保障
 
-**code-generation-guardian** — 代码生成合规守卫
+**codegen-guard** — 代码生成合规守卫
 - **用途**：在生成新代码（新文件/新类/新方法）前，检查是否符合项目规范，防止"能跑但不合规"
 - **触发时机**：创建新的源代码文件或新增类/接口时
 - **具体动作**：检查分层是否正确（Controller 不写业务逻辑？）→ 命名是否合规 → 是否有现成可复用代码 → 包路径是否正确
@@ -334,13 +277,13 @@ docs/
 
 ### bugfix/ Bug 修复技能
 
-**systematic-debugging** — 结构化调试流程
+**systematic-debug** — 结构化调试流程
 - **用途**：用系统方法定位 bug 根因，避免盲目猜测式修改
 - **触发时机**：收到 bug 报告、异常堆栈、或"XX 功能不正常"类问题时
 - **具体动作**：1. 收集信息（日志/堆栈/复现步骤）→ 2. 形成假设列表 → 3. 逐个验证假设（二分法/断点/日志插桩）→ 4. 确认根因 → 5. 输出根因分析报告
 - **丢失风险**：低。bugfix workflow 的第一步即调用此技能，写死在流程中
 
-**test-driven-bugfix** — 测试驱动修复
+**tdd-bugfix** — 测试驱动修复
 - **用途**：确保 bug 被真正修复且不引入新问题
 - **触发时机**：确认 bug 根因后，进入修复阶段时
 - **具体动作**：先写一个失败测试复现 bug → 修改代码让测试通过 → 运行全量回归测试确认无副作用
@@ -348,7 +291,7 @@ docs/
 
 ### refactoring/ 重构技能
 
-**refactoring-planning** — 重构方案规划
+**refactor-plan** — 重构方案规划
 - **用途**：将模糊的"这段代码需要重构"转化为有序的、安全的重构步骤
 - **触发时机**：收到重构需求，或在开发过程中识别出代码坏味道时
 - **具体动作**：识别坏味道类型（过长方法/重复代码/上帝类/特性依恋等）→ 选择重构手法（提取方法/内联/搬移/引入参数对象等）→ 拆分为可独立验证的小步骤序列 → 输出重构计划
@@ -391,7 +334,7 @@ docs/
 ```mermaid
 flowchart TD
     IMP0["云文档导入\n（可选）"] -.->|"写入"| A0["artifacts/prd-source.md\nPRD 原文本地副本"]
-    A0 -.->|"读取（如存在）"| PFS["prd-feature-split"]
+    A0 -.->|"读取（如存在）"| PFS["prd-splitter"]
     PFS -->|"写入"| A1["artifacts/feature-list.md\n功能清单 + 验收标准"]
     A1 -->|"读取"| BS["brainstorming"]
     BS -->|"写入"| A2["artifacts/brainstorm-result.md\n方案对比 + 推荐方案"]
@@ -403,7 +346,7 @@ flowchart TD
     A4 -->|"读取"| LLD["lld-author"]
     LLD -->|"写入"| A5["artifacts/lld.md\n类图 + 方法签名 + 序列图"]
     A5 -->|"读取"| CR2["consistency-reviewer\n审查: HLD vs LLD vs DDL/API"]
-    CR2 -->|"通过后读取"| IP["implementation-planner"]
+    CR2 -->|"通过后读取"| IP["impl-planner"]
     IP -->|"写入"| A6["artifacts/impl-plan.md\n子任务清单 + 依赖 + 验证方式"]
     A6 -->|"读取"| IMP["implementer"]
 ```
@@ -447,7 +390,7 @@ docs/artifacts/
 ```
 
 **归档规则**：
-1. **触发时机**：任务收尾阶段（`verification-before-completion` 技能执行后）
+1. **触发时机**：任务收尾阶段（`done-verify` 技能执行后）
 2. **归档动作**：将 `docs/artifacts/` 根目录下所有 `.md` 文件移入 `archive/{日期}-{任务简称}/`
 3. **命名格式**：`archive/YYYY-MM-DD-{任务简称}/`，任务简称从工作流启动时的用户输入中提取
 4. **根目录清空**：归档后 `docs/artifacts/` 根目录恢复干净状态，只保留 `.gitkeep` 和 `archive/`
@@ -566,52 +509,43 @@ flowchart LR
     U["用户纠正\n（第2次+同类错误）"] --> CD["correction-detection.mdc\n识别重复纠正"]
     CD --> MC["memory-consolidator\n子代理"]
     MC --> CL["分类判定\n属于哪条规则"]
-    CL --> W["写入对应 .mdc\nrules/memory/xxx.mdc"]
+    CL --> W["写入对应 .mdc\nrules/xxx.mdc"]
     W --> N["下次自动加载\n不再犯同样错误"]
 ```
 
-**correction-detection.mdc**（反馈层规则）职责：
+**correction-detection.mdc**（反馈/门禁类规则）职责：
 - always 加载，监听对话中的纠正信号
 - 识别模式：用户说"我说过""又犯了""之前提过""第N次了"等
 - 当检测到重复纠正时，指示调度 `memory-consolidator` 子代理
 
 **memory-consolidator.md**（共享子代理）职责：
 - 接收纠正内容，提取核心规则
-- 判断归属分类（如命名→`naming-conventions.mdc`，异常→`exception-handling.mdc`）
+- 判断归属分类（如命名→`naming.mdc`，异常→`exceptions.mdc`）
 - 以追加方式写入对应的 .mdc 规则文件
-- 如果没有匹配的现有文件，在对应层下新建 .mdc
-- 写入后向用户确认："已将【xx 规则】固化到 `rules/memory/xx.mdc`"
+- 如果没有匹配的现有文件，在 `rules/` 下新建 .mdc
+- 写入后向用户确认："已将【xx 规则】固化到 `rules/xx.mdc`"
 
-**分类映射表**（内置于 memory-consolidator 中）：
+**分类映射表**（内置于 memory-consolidator 中；rules/ 已扁平化，引用直接用文件名）：
 
-- 命名相关 → `memory/naming-conventions.mdc`
-- 异常处理相关 → `memory/exception-handling.mdc`
-- 日志相关 → `memory/logging.mdc`
-- 空值处理相关 → `memory/null-safety.mdc`
-- 方法/函数设计相关 → `memory/method-design.mdc`
-- 注释相关 → `memory/comment-conventions.mdc`
-- 数据库相关 → `memory/database-conventions.mdc`
-- API 相关 → `memory/api-design.mdc`
-- 测试相关 → `memory/testing-conventions.mdc`
-- Git 相关 → `orchestration/git-branch.mdc` 或 `orchestration/git-commit.mdc`
-- 无法归类 → 新建 `memory/<topic>.mdc`
+- 命名相关 → `naming.mdc`
+- 异常处理相关 → `exceptions.mdc`
+- 日志相关 → `logging.mdc`
+- 空值处理相关 → `null-safety.mdc`
+- 方法/函数设计相关 → `method-design.mdc`
+- 注释相关 → `comments.mdc`
+- 数据库相关 → `database.mdc`
+- API 相关 → `api-design.mdc`
+- 测试相关 → `testing.mdc`
+- Git 相关 → `git-branch.mdc` 或 `git-commit.mdc`
+- 无法归类 → 新建 `<topic>.mdc`
 
-## 实施范围
+## 实施状态
 
-本次创建"骨架 + 核心文件"：
-- **完整创建**：AGENTS.md、3 个 workflow YAML、所有 shared agent/skill 定义（含 memory-consolidator）、bugfix 核心 agent/skill、correction-detection.mdc
-- **框架创建**（有基本内容但标注待扩展）：refactoring/feature 下的 agent 和 skill 文件
-- **占位创建**：rules 下的 .mdc 文件（保留结构，内容待适配具体项目）
-- **更新**：docs/harness-guide.md、docs/README.md
-- **保留不动**：.cursor/CLAUDE.md、docs/review-checklist.md、docs/task-template.md
+本设计方案已落地，骨架与核心文件均已创建并随后持续演进：
 
-## 待办事项
+- **已完成**：AGENTS.md、3 个 workflow YAML（`feature-delivery` 已进一步拆为 8 个 `phase-*.yaml` 最小阶段文件）、全部 agents（16 个）与 skills（13 个，每个含 README.md + SKILL.md）、全部 rules（约 49 个，含 `correction-detection` / `human-checkpoint` / `java-edit-self-check` 等门禁）
+- **结构演进**：`rules/`、`skills/`、`agents/` 已在 2026-06 全面扁平化（详见上文"结构现状"说明）
+- **项目特化**：新增 `rules/projects/broker/`（13 个 broker 项目规则，按 globs 锁定作用域）
+- **配套工具**：新增 `.cursor/scripts/`（如 `check-rule-cross-refs` 交叉引用门禁脚本）、`.cursor/plugins/feature-list.md`
 
-- [ ] 清理现有文件，保留 CLAUDE.md、review-checklist.md、task-template.md
-- [ ] 创建 rules/ 四层目录 + 21 个最小职责 .mdc 占位文件（memory 11 + orchestration 4 + feedback 7 + execution 2），含 correction-detection.mdc 和 human-checkpoint.mdc
-- [ ] 创建 shared/ 下的共享 skills 和 agents 定义文件
-- [ ] 创建 bugfix 工作流：workflow YAML + 专属 skills + 专属 agents
-- [ ] 创建 refactoring 工作流：workflow YAML + 专属 skills + 专属 agents
-- [ ] 创建 feature-delivery 工作流：workflow YAML + 专属 skills + 专属 agents
-- [ ] 重写 AGENTS.md 顶层指令，体现三工作流渐进体系
-- [ ] 更新 docs/harness-guide.md 和 docs/README.md
+> 本文件作为设计方案的历史与现状记录；运行时的权威结构以 `AGENTS.md` 与 `harness-guide.md` 为准，三者如有出入以实际仓库目录为准。

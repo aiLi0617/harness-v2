@@ -1,15 +1,15 @@
-# 本文件为工作流参考定义，由对应的 SKILL 或人工按步骤编排执行。
+﻿# 本文件为工作流参考定义，由对应的 SKILL 或人工按步骤编排执行。
 # Cursor IDE 不自动解析此 YAML。
 name: bugfix
 description: Bug 修复工作流（最小集）
 debug: true
 global_skills:
-  - skills/shared/harness-debug-logger
+  - skills/harness-debug-logger
 
 steps:
   - name: reproduce
     description: 复现 Bug
-    skill: skills/bugfix/systematic-debugging
+    skill: skills/systematic-debug
     actions:
       - 收集 bug 信息（日志/堆栈/复现步骤）
       - 在本地环境复现 bug
@@ -17,8 +17,8 @@ steps:
 
   - name: root-cause-analysis
     description: 根因分析
-    agent: agents/bugfix/bug-analyst
-    skill: skills/bugfix/systematic-debugging
+    agent: agents/bug-analyst
+    skill: skills/systematic-debug
     actions:
       - 形成假设列表
       - 逐个验证假设
@@ -27,8 +27,8 @@ steps:
 
   - name: fix
     description: 编写修复
-    skill: skills/bugfix/test-driven-bugfix
-    agent: agents/shared/implementer
+    skill: skills/tdd-bugfix
+    agent: agents/implementer
     actions:
       - 先写失败测试复现 bug
       - 修改代码让测试通过
@@ -36,7 +36,7 @@ steps:
 
   - name: review
     description: 代码审查
-    agent: agents/shared/code-reviewer
+    agent: agents/code-reviewer
     review_loop:
       max_rounds: 5
       on_failure: 回退给 implementer 修复
@@ -44,7 +44,7 @@ steps:
 
   - name: verify
     description: 最终验证
-    skill: skills/shared/verification-before-completion
+    skill: skills/done-verify
     actions:
       - 编译通过
       - 测试全绿
@@ -57,30 +57,27 @@ steps:
       - 归档 docs/artifacts/ 到 archive/{date}-{task}/
 
 agents:
-  - agents/shared/implementer
-  - agents/shared/code-reviewer
-  - agents/shared/memory-consolidator
-  - agents/bugfix/bug-analyst
+  - agents/implementer
+  - agents/code-reviewer
+  - agents/memory-consolidator
+  - agents/bug-analyst
 
+# rules/ 已扁平化（无 memory/orchestration/feedback/execution 子目录），按文件名引用即可
 rules:
-  # 显式列出本工作流激活的规则;alwaysApply: true 的规则会被 Cursor 自动加载,这里列出以便资源冲突检测可观测
-  always:  # 全局always规则,所有工作流共享
-    - orchestration/coding-standards-loader
-    - orchestration/stage-contracts
-    - feedback/correction-detection
-    - feedback/human-checkpoint
-    - feedback/java-edit-self-check
-  memory:
-    - exception-handling
+  always:  # 全局 always 规则，所有工作流共享
+    - rules-loader
+    - stage-contracts
+    - correction-detection
+    - human-checkpoint
+    - java-edit-self-check
+  active:
+    - exceptions
     - null-safety
     - logging
-  orchestration:
     - git-branch
     - git-commit
-  feedback:
-    - compilation-guard
+    - compile-guard
     - lint-guard
     - test-guard
-  execution:
     - execution-boundary
     - environment-boundary

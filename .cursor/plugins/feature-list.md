@@ -1,4 +1,4 @@
-# 第三方插件安装清单
+﻿# 第三方插件安装清单
 
 > Harness 接入业务项目后，按需安装下列 **Cursor / Agent 第三方插件**。
 > 与 Harness 内置 MCP 模板（`.cursor/mcp/mcp-template.json`）相互独立；MCP 密钥类服务见 README「接入业务项目」。
@@ -179,11 +179,11 @@ cd <业务项目> && codegraph init -i
 
 | 项目 | 内容 |
 |------|------|
-| 用途 | 通过 LogQL 查询 Grafana Loki 日志；配合 `ones-loki-trace-investigator` 做缺陷 trace 排查 |
+| 用途 | 通过 LogQL 查询 Grafana Loki 日志；配合 `loki-log-investigator` 做缺陷 trace 排查 |
 | 仓库 | [grafana/loki-mcp](https://github.com/grafana/loki-mcp) |
 | 版本 | `v0.6.0`（脚本固定 tag） |
 | Harness 脚本 | `.cursor/scripts/init-loki-mcp.ps1` / `.sh` |
-| MCP 名称 | `loki-mcp`（与 `mcp-conventions.mdc` 一致） |
+| MCP 名称 | `loki-mcp`（与 `mcp.mdc` 一致） |
 | 配置落点 | 优先写入用户级 `~/.cursor/mcp.json`；若存在项目 `.cursor/mcp.json` 则一并合并 |
 
 ### 安装前
@@ -275,7 +275,7 @@ go build -o "$env:LOCALAPPDATA\loki-mcp\loki-mcp-server.exe" ./cmd/server
 
 - [ ] `loki_label_names` 返回 label 列表（如 `namespace`、`job`、`app`、`pod` 等）
 - [ ] `loki_query` 传入 `{job=~".+"}` 或 `{namespace="sit"} |= "ERROR"` 能返回日志或「无匹配」（均表示链路通）
-- [ ] 或触发 `ones-loki-trace-investigator` 代理，能根据 traceId 拉到日志
+- [ ] 或触发 `loki-log-investigator` 代理，能根据 traceId 拉到日志
 
 **2026-05-25 团队实测记录（Windows，binary 模式）：**
 

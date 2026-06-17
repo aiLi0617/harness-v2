@@ -1,0 +1,52 @@
+# feature-delivery 工作流 · 阶段 7：编码实现 → 规格审查 → 质量审查 → 通用审查
+# 由 feature-delivery-workflow SKILL 按 feature-delivery.yaml 的 phases 顺序编排执行。
+# Cursor IDE 不自动解析此 YAML。rules / agents / global_skills 继承 feature-delivery.yaml。
+name: feature-delivery/phase-7-code
+description: 按计划编码并依次通过三道审查闭环
+phase: 7
+entry_artifacts:
+  - docs/artifacts/impl-plan.md
+  - docs/artifacts/lld.md  # 供规格审查比对
+exit_artifacts:
+  - 源代码
+  - 审查报告（spec / quality / code）
+prev_phase: feature-delivery/phase-6-plan
+next_phase: feature-delivery/phase-8-verify-archive
+
+steps:
+  - name: code
+    description: 编码实现
+    agent: agents/implementer
+    on_demand_skill: skills/codegen-guard  # 新建文件场景由 implementer 按需调用
+    actions:
+      - 读取 impl-plan.md
+      - 按子任务逐项实现
+      - 涉及新建文件时先调用 codegen-guard 守卫
+      - 每个子任务完成后运行测试
+
+  - name: spec-review
+    description: 规格审查
+    agent: agents/spec-reviewer
+    review_loop:
+      max_rounds: 5
+      on_failure: 回退给 implementer 修复
+      on_exhausted: 标记人工介入，暂停流程
+    actions:
+      - 读取 lld.md + 实际代码
+      - 校验代码是否按 LLD 设计实现
+
+  - name: quality-review
+    description: 质量审查
+    agent: agents/code-quality-reviewer
+    review_loop:
+      max_rounds: 5
+      on_failure: 回退给 implementer 修复
+      on_exhausted: 标记人工介入，暂停流程
+
+  - name: code-review
+    description: 通用代码审查
+    agent: agents/code-reviewer
+    review_loop:
+      max_rounds: 5
+      on_failure: 回退给 implementer 修复
+      on_exhausted: 标记人工介入，暂停流程

@@ -1,0 +1,21 @@
+---
+description: broker 项目命名特化（云商 Yunshang 前缀 / 一文件一类）约定
+globs:
+  - "**/com/broker/**/*.java"
+  - "**/broker-*/**/*.java"
+alwaysApply: false
+---
+
+# broker 项目命名特化
+
+## 云商对接命名
+
+- ⚠️ 云商开放接口（yunshang-http 模块及其调用链）使用的请求/响应/视图对象，类名必须统一添加 `Yunshang` 前缀（如 `YunshangBatchSkuListingInfoReqDTO`、`YunshangSkuListingInfoVO`），禁止使用无前缀命名
+
+## 一文件一类
+
+- ⚠️ 尽量避免"类中类"定义 DTO/VO（尤其云商接口对象）；默认一文件一类，嵌套类仅在强绑定且不可复用场景才允许，并需在代码注释说明原因
+
+## 补充规则
+
+- 云商接口对象统一带 `Yunshang` 前缀；DTO/VO 默认一文件一类，禁止用"类中类"承载可复用对象

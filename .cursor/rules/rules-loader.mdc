@@ -1,0 +1,115 @@
+﻿---
+description: 规则加载器
+alwaysApply: true
+---
+
+# 规则加载器
+
+> **架构原则**：规则文件互不引用，每条规则自描述本领域约束。「何时读哪些规则」由本文件、workflow YAML 与 globs 负责映射；纠正写入路由见 `correction-detection.mdc` 与 `memory-consolidator`。
+
+在开始执行任务之前，必须先加载 `.cursor/rules/` 下与当前任务相关的规则。
+
+> 自 2026-06 起 `.cursor/rules/` 已扁平化（无 `memory/`、`feedback/`、`orchestration/`、`execution/` 子目录），所有 `.mdc` 直接位于 `rules/` 根。
+
+## 加载流程
+
+1. **扫描目录**：列出 `.cursor/rules/` 下所有 `.mdc` 文件（不仅限于下方映射表中已列出的），同时**递归扫描** `.cursor/rules/projects/<project>/` 下所有 `.mdc`
+2. **匹配规则**：先按下方映射表加载已知规则，再检查扫描结果中是否有映射表未覆盖的新文件，根据文件名判断是否与当前任务相关；项目特化规则的命中由其自身 `globs` 决定
+3. **读取内容**：用 Read 工具读取所有相关规则文件的完整内容
+4. **严格遵守**：在后续执行过程中严格遵守所加载的规则
+
+## 场景加载指引
+
+> 与 `correction-detection.mdc`、`agents/memory-consolidator.md` 的分类表保持同步,三处任一处新增分类时必须同步更新。
+
+| 任务场景 | 必须加载的规则（按文件名） |
+|---|---|
+| 编写/修改 Java 代码 | `null-safety` `naming` `method-design` `collections` `exceptions` `comments` `code-style-format` `control-flow` `oop` `numeric` `constants` `java-edit-self-check` |
+| 涉及数据库/Entity/Mapper | `database` `schema-guard` `mybatis` |
+| 涉及 ER 图绘制/DDL 设计文档 | `er-diagram` |
+| 涉及 API/Controller | `api-design` `security` `error-codes` `enums` |
+| 涉及多租户/跨租户数据访问/`ignore-urls`/`ignore-tables`/MQ 或三方回调接入 | `tenant-isolation` `message-queue` |
+| 涉及并发/多线程 | `concurrency` |
+| 涉及日期时间处理 | `datetime` |
+| 涉及日志 | `logging` |
+| 涉及 DTO/VO/Entity 设计 | `pojo` `enums` |
+| 涉及测试代码 | `testing` |
+| 涉及依赖/pom.xml | `dependencies` |
+| 涉及项目结构变更 | `project-architecture` `microservice` `design-doc` |
+| 涉及 Redis 缓存 | `redis` |
+| 涉及 OBS/对象存储/文件上传下载 | `obs` |
+| 涉及应用安全/权限/脱敏/CSRF | `security` |
+| 涉及 Git 分支操作 | `git-branch` |
+| 涉及 Git 提交 | `git-commit` |
+| 涉及变更实施流程/渐进式改动 | `change-implementation` |
+| 涉及任务拆解/子任务规划 | `task-decomposition` |
+| 涉及子代理产物交接 | `stage-contracts` |
+| 涉及 MCP 配置/代理引用 MCP | `mcp` |
+| 代码审查 | `naming` `method-design` `exceptions` `logging` `comments` `scope-guard` `error-codes` `oop` `enums` `constants` |
+| 涉及概要/详细设计文档 | `design-doc` |
+| 涉及错误码定义 | `error-codes` `api-design` |
+| 涉及规则文件维护/新增 .mdc | `cross-ref-guard` |
+
+多个场景重叠时,合并加载所有相关规则。
+
+## 映射表维护
+
+当在 `.cursor/rules/` 下**新增或删除** `.mdc` 规则文件时，必须同步更新上方映射表，保持映射表与实际文件一致。
+
+## 项目特化规则加载约定
+
+当某条规则只对特定业务项目（而非 harness 通用层）适用时，按以下约定组织：
+
+### 物理位置
+
+```
+.cursor/rules/
+  <topic>.mdc                      ← 通用规则（约 45 条，全部位于 rules/ 根，扁平化）
+  projects/                        ← 仅按"项目作用域"分组，承载项目特化规则
+    <project-1>/
+      <project-1>-<topic>.mdc      ← 项目 1 特化规则（文件名带项目前缀便于识别）
+    <project-2>/
+      <project-2>-<topic>.mdc
+    <project-3>/
+      ...
+```
+
+`projects/<name>/` 内部**不再嵌套**任何"类型/阶段"子目录，只按项目作用域聚合。
+
+### 命名约定
+
+- 文件名必须带 `<project>-` 前缀（例：`broker-mq-event.mdc`），便于 ls 时一眼识别归属；命名遵循通用规则同样的"去冗余后缀"风格（不加 `-conventions` / `-handling` / `-management`）
+- 同一项目内的多条特化规则按主题切分文件，单条规则不写"大杂烩"
+
+### 加载/隔离机制
+
+业务项目通过 `link-cursor-config.ps1` link 后，三个项目会同时看到所有 `projects/*` 子目录下的文件。**作用域隔离完全依赖每条规则自身的 `globs` 字段**：
+
+```yaml
+---
+description: <project> 项目 <topic> 约定
+globs:
+  - "**/<project>/**/*.java"            ← 必须包含本项目特征路径
+  - "**/<project>-*/src/**/*.java"
+alwaysApply: false
+---
+```
+
+强制约束：
+- **`projects/<name>/*.mdc` 必须有非空 `globs`**，且至少一条 glob 命中本项目专有路径特征（项目代码包路径、项目模块名前缀等）
+- **禁止使用 `alwaysApply: true`**——项目特化规则不应在所有项目无差别加载
+- **禁止 globs 写 `**/*.java` 这类无差别匹配**
+
+### 跨项目共享但非全局的规则
+
+例如 broker 与 btoc 都需要、admin 不需要的规则：
+
+| 选项 | 适用 |
+|------|------|
+| **复制到两个 projects/ 下** | 推荐。短期一致长期会分化，复制让分化代价为零 |
+| **抽到 `rules/` 根，globs 同时匹配两项目路径** | 仅当三个项目以后都会用且只是路径模式差异 |
+| **新增 `projects/_shared-<域>/`** | 不推荐，二级共享分组会让加载语义复杂化 |
+
+### 与场景表的关系
+
+上方场景表只描述**通用规则**的触发关系；项目特化规则不在场景表中登记，由 globs 自主命中即可。代码审查 / 编码任务等场景下，AI 自行扫描 `projects/<本项目>/` 并按 globs 判定是否加载。

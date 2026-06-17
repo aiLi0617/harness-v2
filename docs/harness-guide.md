@@ -47,33 +47,32 @@ AI 模型有四个固有缺陷：
 
 ## 目录结构
 
+> 自 2026-06 起，`rules/`、`skills/`、`agents/` 三类资源全部扁平化，原分类层仅保留为语义标签。
+
 ```
 .cursor/
-  rules/                       ← 被动规则，按四层分类（32 个）
-    memory/                        记忆层（16 个）：命名、异常、日志、空值、方法、注释、集合、并发、日期、POJO、依赖、API、数据库、测试、项目架构、多租户隔离
-    orchestration/                 编排层（6 个）：Git 分支、Git 提交、变更实施、任务拆解、阶段契约、规则加载器
-    feedback/                      反馈层（8 个）：编译/Lint/测试门禁、变更范围、纠正检测、人工检查点、Schema 一致性、Java 编辑后自检
-    execution/                     执行层（2 个）：操作红线、环境边界
-  skills/                      ← 主动技能，按工作流分组（13 个）
-    shared/                        共享（4 个）：调试日志、完成验证、Git Worktree、代码守卫
-    bugfix/                        Bug 修复（2 个）：结构化调试、测试驱动修复
-    refactoring/                   重构（2 个）：重构规划、安全重构
-    feature/                       功能交付（5 个）：头脑风暴、编写计划、全流程编排、HLD 发布飞书、LLD 发布飞书
-  agents/                      ← 子代理，按工作流分组（14 个）
-    shared/                        共享（4 个）：实现者、审查者、记忆固化、一致性审查
-    bugfix/                        Bug 修复（1 个）：Bug 分析师
-    refactoring/                   重构（2 个）：重构规划师、质量审查
-    feature/                       功能交付（7 个）：PRD 拆分、HLD、LLD、实现规划等
+  rules/                       ← 被动规则，全部扁平化直接挂在 rules/ 下（约 49 个）
+                                  按语义可分四类：编码规范（约 28 个）、工作流编排（约 6 个）、门禁守卫（约 9 个）、安全边界（2 个）
+    projects/broker/               broker 项目特化规则（13 个，靠文件名 broker- 前缀 + globs 锁定生效范围）
+  skills/                      ← 主动技能，全部扁平化挂在 skills/<skill-name>/SKILL.md（13 个）
+                                  按语义可分四类：共享（4）、bugfix（2）、refactoring（2）、feature（5）
+  agents/                      ← 子代理，全部扁平化挂在 agents/<agent-name>.md（16 个）
+                                  按语义可分四类：共享（4）、bugfix（3）、refactoring（2）、feature（7）
   workflows/                   ← 工作流 YAML（3 个）
     bugfix.yaml                    Bug 修复流水线
     refactoring.yaml               代码重构流水线
-    feature-delivery.yaml          功能交付流水线
+    feature-delivery.yaml          功能交付流水线（编排索引）
+    feature-delivery/              功能交付的 8 个最小阶段文件（phase-1..8）
+  scripts/                     ← 校验/初始化脚本（如 check-rule-cross-refs.ps1 / .sh）
+  mcp/mcp-template.json        ← MCP 服务配置模板
+  plugins/feature-list.md      ← 第三方插件安装清单
 AGENTS.md                      ← 顶层代理指令
 docs/
   harness-guide.md             ← 本文件
   harness-plan.md              ← 完整设计方案
   review-checklist.md          ← AI 产出人工审查清单
   task-template.md             ← 需求拆解模板
+  templates/                   ← 文档模板（调试日志 / 决策记录 / 审查清单 / 任务）
   artifacts/                   ← 制品目录（子代理间的交接物）
     archive/                       历史制品归档
 ```
@@ -117,18 +116,18 @@ docs/
 
 ### 新增编码规范
 
-在 `rules/memory/` 下新建 `.mdc` 文件，设置对应的 `globs` 匹配模式。
+在 `rules/` 下新建 `.mdc` 文件（已扁平化，无 `memory/` 子目录），设置对应的 `globs` 匹配模式。
 
 ### 新增技能
 
-在 `skills/{对应工作流}/技能名/` 下创建 `SKILL.md`。
+在 `skills/技能名/` 下创建 `SKILL.md`（已扁平化，无工作流子目录）。
 
 ### 新增子代理
 
-在 `agents/{对应工作流}/` 下创建 `.md` 定义文件。
+在 `agents/` 下创建 `<代理名>.md` 定义文件（已扁平化，无工作流子目录）。
 
 ### 适配具体项目
 
-1. 编辑 `rules/memory/project-architecture.mdc`，填入项目的分层结构和模块职责
+1. 编辑 `rules/project-architecture.mdc`，填入项目的分层结构和模块职责
 2. 根据项目技术栈调整各规则文件中标注"待适配"的部分
 3. 如果项目不需要某些规则，将对应 `.mdc` 的 `alwaysApply` 改为 `false`
