@@ -34,27 +34,47 @@ $argsList = @(
     "--apply-profile-all", $Profile
 )
 if ($ProjectsRegistry) { $argsList += @("--projects-registry", $ProjectsRegistry) }
+$workspacePath = Join-Path $env:USERPROFILE ".cursor\mcp.workspace.json"
+if (Test-Path $workspacePath) { $argsList += @("--workspace-config", $workspacePath) }
 if ($DryRun) { $argsList += "--dry-run" }
 
 & $python.Source @argsList
 if ($LASTEXITCODE -eq 0 -and -not $DryRun) {
-    $registryPath = if ($ProjectsRegistry) { $ProjectsRegistry } else { Join-Path $env:USERPROFILE ".cursor\mcp.projects.json" }
-    if (Test-Path $registryPath) {
-        $registry = Get-Content $registryPath -Raw -Encoding UTF8 | ConvertFrom-Json
-        $RocketMqRestart = Join-Path $PSScriptRoot "restart-rocketmq-mcp.ps1"
-        foreach ($entry in $registry.projects) {
+    $RocketMqRestart = Join-Path $PSScriptRoot "restart-rocketmq-mcp.ps1"
+    if (Test-Path $workspacePath) {
+        $ws = Get-Content $workspacePath -Raw -Encoding UTF8 | ConvertFrom-Json
+        foreach ($prop in $ws.projects.PSObject.Properties) {
+            $projectId = $prop.Name
+            $entry = $prop.Value
             $root = $entry.path
             if (-not (Test-Path $root)) { continue }
-            $configPath = Join-Path $root ".cursor\mcp.config.json"
-            if (-not (Test-Path $configPath)) { continue }
-            $config = Get-Content $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
-            $profileDoc = $config.profiles.$Profile
+            $profileDoc = $entry.profiles.$Profile
             if (-not $profileDoc) { continue }
             if ("rocketmq-mcp" -notin @($profileDoc.servers)) { continue }
             if (Test-Path $RocketMqRestart) {
                 Write-Host ""
-                Write-Host "--- rocketmq-mcp restart [$($entry.id) / $Profile] ---"
+                Write-Host "--- rocketmq-mcp restart [$projectId / $Profile] ---"
                 & $RocketMqRestart -Profile $Profile -ProjectRoot $root
+            }
+        }
+    } else {
+        $registryPath = if ($ProjectsRegistry) { $ProjectsRegistry } else { Join-Path $env:USERPROFILE ".cursor\mcp.projects.json" }
+        if (Test-Path $registryPath) {
+            $registry = Get-Content $registryPath -Raw -Encoding UTF8 | ConvertFrom-Json
+            foreach ($entry in $registry.projects) {
+                $root = $entry.path
+                if (-not (Test-Path $root)) { continue }
+                $configPath = Join-Path $root ".cursor\mcp.config.json"
+                if (-not (Test-Path $configPath)) { continue }
+                $config = Get-Content $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
+                $profileDoc = $config.profiles.$Profile
+                if (-not $profileDoc) { continue }
+                if ("rocketmq-mcp" -notin @($profileDoc.servers)) { continue }
+                if (Test-Path $RocketMqRestart) {
+                    Write-Host ""
+                    Write-Host "--- rocketmq-mcp restart [$($entry.id) / $Profile] ---"
+                    & $RocketMqRestart -Profile $Profile -ProjectRoot $root
+                }
             }
         }
     }

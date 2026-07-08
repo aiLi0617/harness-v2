@@ -9,7 +9,7 @@ description: >-
 
 # MCP 环境切换（mcp-switch）
 
-在 **已安装/已配置** MCP 的前提下，切换 `mcp.config.json` 的 `activeProfile`，重新生成 `~/.cursor/mcp.json`。
+在 **已安装/已配置** MCP 的前提下，切换环境 profile，重新生成 `~/.cursor/mcp.json`。
 
 > 首次安装、编辑 registry、安装各 MCP 二进制：见 **[mcp-install](../mcp-install/SKILL.md)**。
 
@@ -17,15 +17,50 @@ description: >-
 
 | 文件 | git | 作用 |
 |------|-----|------|
-| [mcp.projects.example.json](mcp.projects.example.json) | ✅ | 多项目注册表模板（复制到 `~/.cursor/mcp.projects.json`） |
-| [mcp-registry.json](mcp-registry.json) | ✅ | 服务模板（与 mcp-install 同步副本） |
+| **`~/.cursor/mcp.workspace.json`** | ❌ | **推荐：全部项目 × 全部环境 单文件配置** |
+| [mcp.workspace.example.json](mcp.workspace.example.json) | ✅ | workspace 模板（无真实密钥） |
+| [mcp.projects.example.json](mcp.projects.example.json) | ✅ | 旧版多项目注册表（迁移用） |
+| [mcp-registry.json](mcp-registry.json) | ✅ | 服务模板 |
 | `scripts/switch-all-mcp-profiles.ps1` | ✅ | 多项目统一切换 |
-| `scripts/switch-mcp-profile.ps1` | ✅ | 单项目切换 |
 | `scripts/show-project-mcp.ps1` | ✅ | 查看当前项目 MCP 映射 |
-| `scripts/restart-rocketmq-mcp.ps1` | ✅ | switch 后重启 rocketmq jar |
-| `scripts/mcp-configurator.py` | ✅ | 核心逻辑（与 mcp-install 同步副本） |
+| `~/.cursor/mcp.json` | — | Cursor **生效**配置（脚本生成，勿手改） |
 
-> `mcp-install/scripts/` 下同名脚本为**兼容转发**，新路径以本目录为准。
+> 存在 `mcp.workspace.json` 时**优先使用**；否则回退到「每项目 `mcp.config.json` + `mcp.projects.json`」。
+
+## 单文件配置（推荐）
+
+### 1. 首次迁移（从三份 per-project 配置合并）
+
+```powershell
+copy .cursor\skills\shared\mcp-switch\mcp.workspace.example.json $env:USERPROFILE\.cursor\mcp.workspace.json
+# 编辑后切换；或从现有 per-project 配置自动合并：
+python .cursor/skills/shared/mcp-switch/scripts/mcp-configurator.py `
+  --project-root . --skill-root .cursor/skills/shared/mcp-switch `
+  --migrate-to-workspace --force
+```
+
+### 2. 结构
+
+```json
+{
+  "activeProfile": "dev",
+  "tools": { "UVX_BIN": "...", "LOKI_MCP_BIN": "..." },
+  "fixedServers": ["codegraph", "ONES"],
+  "projects": {
+    "broker": { "label": "经纪商", "path": "D:/project/zfnjjs-two", "profiles": { "dev": {...}, "sit": {...} } },
+    "cloud":  { ... },
+    "b2c":    { ... }
+  }
+}
+```
+
+**改配置只编辑这一份**：`C:\Users\<你>\.cursor\mcp.workspace.json`
+
+### 3. 统一切换
+
+```powershell
+.cursor/skills/shared/mcp-switch/scripts/switch-all-mcp-profiles.ps1 dev
+```
 
 ## 两种模式
 
@@ -34,11 +69,13 @@ description: >-
 | **单项目** | 只维护一个代码库 | `switch-mcp-profile.ps1` | `mysql-mcp`、`loki-mcp`（无前缀） |
 | **多项目** | 经纪商 / 云商 / B2C 等并行 | `switch-all-mcp-profiles.ps1` | `{projectId}-mysql-mcp`（带前缀） |
 
-## 多项目：一次切换全部环境
+## 多项目：一次切换全部环境（legacy 分文件模式）
+
+> 若已使用 `mcp.workspace.json`，跳过本节。
 
 ### 1. 各项目声明身份
 
-每个项目根目录 `.cursor/mcp.config.json` 增加：
+每个项目根目录 `.cursor/mcp.config.json` 增加 `projectId`（旧模式）。
 
 ```json
 {
@@ -81,7 +118,7 @@ copy .cursor\skills\shared\mcp-switch\mcp.projects.example.json $env:USERPROFILE
 
 **识别步骤：**
 
-1. 读取**当前工作区** `.cursor/mcp.config.json` 的 `projectId`（如 `broker`）
+1. 读 `~/.cursor/mcp.workspace.json` 中当前工作区 path 对应的 `projectId`（如 `broker`）
 2. 多项目模式下，分环境工具名 = **`{projectId}-<服务>`**
 3. 共享工具直接用原名：`ONES`、`codegraph`
 

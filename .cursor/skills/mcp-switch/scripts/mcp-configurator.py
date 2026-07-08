@@ -209,6 +209,48 @@ def projects_registry_path() -> Path:
     return Path.home() / ".cursor" / "mcp.projects.json"
 
 
+def workspace_config_path() -> Path:
+    return Path.home() / ".cursor" / "mcp.workspace.json"
+
+
+def save_workspace_config(workspace: dict[str, Any], path: Path | None = None) -> None:
+    out = path or workspace_config_path()
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(workspace, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def project_config_from_workspace(workspace: dict[str, Any], project_id: str) -> dict[str, Any]:
+    entry = (workspace.get("projects") or {}).get(project_id) or {}
+    return {
+        "projectId": project_id,
+        "projectLabel": entry.get("label", project_id),
+        "activeProfile": workspace.get("activeProfile", "dev"),
+        "defaultProfile": workspace.get("defaultProfile", "dev"),
+        "fixedServers": workspace.get("fixedServers", ["codegraph", "ONES"]),
+        "fixedEnv": workspace.get("fixedEnv", {}),
+        "tools": workspace.get("tools", {}),
+        "profiles": entry.get("profiles", {}),
+    }
+
+
+def find_project_id_by_root(workspace: dict[str, Any], project_root: Path) -> str | None:
+    target = project_root.resolve()
+    for project_id, entry in (workspace.get("projects") or {}).items():
+        raw_path = str(entry.get("path") or "").strip()
+        if not raw_path:
+            continue
+        if Path(raw_path).expanduser().resolve() == target:
+            return project_id
+    return None
+
+
+def merge_tools_layers(*layers: dict[str, Any]) -> dict[str, str]:
+    merged: dict[str, str] = {}
+    for layer in layers:
+        merged.update({k: str(v) for k, v in (layer.get("tools") or {}).items() if v})
+    return merged
+
+
 def resolve_project_id(
     config: dict[str, Any],
     project_root: Path,
@@ -765,16 +807,223 @@ def all_prefixed_managed_keys(
     return keys
 
 
+def all_prefixed_managed_keys_workspace(
+    workspace: dict[str, Any],
+    registry_ids: set[str],
+) -> set[str]:
+    keys: set[str] = set(SHARED_MCP_IDS) | DEPRECATED_MANAGED_KEYS
+    for project_id in (workspace.get("projects") or {}):
+        for sid in registry_ids:
+            keys.add(prefix_server_key(project_id, sid))
+        for profile_name in ("dev", "sit", "pre", "uat"):
+            for sid in registry_ids:
+                keys.add(f"{sid}-{profile_name}")
+    return keys
+
+
+def migrate_to_workspace(
+    projects_registry: Path | None = None,
+    workspace_path: Path | None = None,
+    force: bool = False,
+) -> int:
+    out_path = workspace_path or workspace_config_path()
+    if out_path.is_file() and not force:
+        print(f"Already exists: {out_path}. Pass --force to overwrite.", file=sys.stderr)
+        return 1
+
+    projects_doc = load_projects_registry(projects_registry)
+    entries = projects_doc.get("projects") or []
+    if not entries:
+        print("No projects in registry.", file=sys.stderr)
+        return 1
+
+    project_configs: dict[str, dict[str, Any]] = {}
+    per_project_files: list[dict[str, Any]] = []
+    for entry in entries:
+        project_id = str(entry.get("id") or "").strip()
+        raw_path = str(entry.get("path") or "").strip()
+        if not project_id or not raw_path:
+            continue
+        project_root = Path(raw_path).expanduser().resolve()
+        if not project_root.is_dir():
+            print(f"Skip missing directory: {project_root}", file=sys.stderr)
+            continue
+        try:
+            config = load_mcp_config(project_root)
+        except FileNotFoundError as exc:
+            print(f"Skip {project_root}: {exc}", file=sys.stderr)
+            continue
+        project_configs[project_id] = config
+        per_project_files.append(config)
+
+    if not project_configs:
+        print("No project configs migrated.", file=sys.stderr)
+        return 1
+
+    first = next(iter(project_configs.values()))
+    active = first.get("activeProfile") or first.get("defaultProfile") or "dev"
+    for cfg in project_configs.values():
+        if cfg.get("activeProfile"):
+            active = cfg["activeProfile"]
+            break
+
+    workspace: dict[str, Any] = {
+        "activeProfile": active,
+        "defaultProfile": first.get("defaultProfile", "dev"),
+        "fixedServers": first.get("fixedServers", ["codegraph", "ONES"]),
+        "fixedEnv": first.get("fixedEnv", {}),
+        "tools": merge_tools_layers(*per_project_files),
+        "projects": {},
+    }
+
+    for entry in entries:
+        project_id = str(entry.get("id") or "").strip()
+        if project_id not in project_configs:
+            continue
+        cfg = project_configs[project_id]
+        workspace["projects"][project_id] = {
+            "label": cfg.get("projectLabel") or entry.get("label") or project_id,
+            "path": str(Path(str(entry.get("path"))).expanduser().resolve()).replace("\\", "/"),
+            "profiles": cfg.get("profiles") or {},
+        }
+
+    save_workspace_config(workspace, out_path)
+    print(f"Migrated {len(workspace['projects'])} projects -> {out_path}")
+    return 0
+
+
+def apply_all_from_workspace(
+    skill_root: Path,
+    target: str,
+    profile: str,
+    dry_run: bool,
+    workspace_path: Path,
+) -> int:
+    if target != "user":
+        print("Multi-project switch only supports --target user", file=sys.stderr)
+        return 1
+
+    workspace = load_json(workspace_path)
+    projects = workspace.get("projects") or {}
+    if not projects:
+        print("No projects in workspace config.", file=sys.stderr)
+        return 1
+
+    registry = load_json(skill_root / "mcp-registry.json")
+    registry_ids = set(registry.get("servers", {}).keys())
+    all_active: dict[str, Any] = {}
+
+    print(f"Switch all projects -> profile: {profile}")
+    print(f"Workspace: {workspace_path}")
+    print("")
+
+    for project_id, entry in sorted(projects.items()):
+        raw_path = str(entry.get("path") or "").strip()
+        if not raw_path:
+            print(f"Skip {project_id}: missing path", file=sys.stderr)
+            continue
+        project_root = Path(raw_path).expanduser().resolve()
+        if not project_root.is_dir():
+            print(f"Skip {project_id}: missing directory {project_root}", file=sys.stderr)
+            continue
+
+        config = project_config_from_workspace(workspace, project_id)
+        known = set((config.get("profiles") or {}).keys())
+        if profile not in known:
+            print(f"Skip {project_id}: profile '{profile}' not configured", file=sys.stderr)
+            continue
+
+        pool = build_mcp_pool(config, registry, project_root)
+        active = compose_mcp_for_profile(pool, profile)
+        project_label = str(entry.get("label") or project_id)
+        prof_label = config["profiles"][profile].get("label", profile)
+
+        prefixed: dict[str, Any] = {}
+        for sid, cfg in active.items():
+            key = prefix_server_key(project_id, sid)
+            if key in SHARED_MCP_IDS:
+                if key not in all_active:
+                    all_active[key] = cfg
+                prefixed[key] = cfg
+            else:
+                prefixed[key] = cfg
+                all_active[key] = cfg
+
+        print(f"=== {project_label} ({project_id}) ===")
+        print(f"  path: {project_root}")
+        print(f"  activeProfile: {profile} ({prof_label})")
+        for key in sorted(prefixed):
+            endpoint = describe_server_endpoint(key, prefixed[key], registry_ids)
+            shared = " (共享)" if key in SHARED_MCP_IDS else ""
+            print(f"  {key}: {endpoint or '(无地址)'}{shared}")
+        print("")
+
+    if not all_active:
+        print("No MCP servers generated.", file=sys.stderr)
+        return 1
+
+    if not dry_run:
+        workspace["activeProfile"] = profile
+        save_workspace_config(workspace, workspace_path)
+
+    out_path = Path.home() / ".cursor" / "mcp.json"
+    existing = load_json(out_path) if out_path.is_file() else {}
+    existing_servers = existing.get("mcpServers") or {}
+    managed = all_prefixed_managed_keys_workspace(workspace, registry_ids) | registry_ids
+    custom = {k: v for k, v in existing_servers.items() if k not in managed}
+    final_servers = {**custom, **all_active}
+
+    removed = sorted(k for k in existing_servers if k in managed and k not in all_active)
+    if removed:
+        print("Removed stale:", ", ".join(removed))
+
+    if dry_run:
+        print("\n--- dry run ---")
+        print(json.dumps({"mcpServers": final_servers}, indent=2, ensure_ascii=False))
+        return 0
+
+    if out_path.is_file():
+        backup = out_path.with_suffix(f".json.bak.{datetime.now():%Y%m%d-%H%M%S}")
+        backup.write_text(out_path.read_text(encoding="utf-8"), encoding="utf-8")
+        print(f"Backup: {backup}")
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(
+        json.dumps({"mcpServers": final_servers}, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    print(f"Written: {out_path} ({len(final_servers)} servers)")
+    print("")
+    print("--- 当前项目如何找 MCP ---")
+    print("  1. 打开目标项目工作区")
+    print("  2. 读 ~/.cursor/mcp.workspace.json 中对应 projectId")
+    print("  3. 分环境工具名 = {projectId}-<服务>，如 broker-mysql-mcp")
+    print("  4. 共享工具：ONES、codegraph（无前缀）")
+    print("  5. 运行 show-project-mcp.ps1 查看完整映射")
+    return 0
+
+
 def apply_all_projects_profile(
     skill_root: Path,
     target: str,
     profile: str,
     dry_run: bool,
     projects_registry: Path | None = None,
+    workspace_config: Path | None = None,
 ) -> int:
     if target != "user":
         print("Multi-project switch only supports --target user", file=sys.stderr)
         return 1
+
+    ws_path = workspace_config or workspace_config_path()
+    if ws_path.is_file():
+        return apply_all_from_workspace(
+            skill_root=skill_root,
+            target=target,
+            profile=profile,
+            dry_run=dry_run,
+            workspace_path=ws_path,
+        )
 
     projects_doc = load_projects_registry(projects_registry)
     entries = projects_doc.get("projects") or []
@@ -892,8 +1141,27 @@ def apply_all_projects_profile(
     return 0
 
 
-def show_project_mcp(project_root: Path) -> int:
-    config = load_mcp_config(project_root)
+def show_project_mcp(
+    project_root: Path,
+    workspace_config: Path | None = None,
+) -> int:
+    ws_path = workspace_config or workspace_config_path()
+    config_source = str(mcp_config_path(project_root))
+    if ws_path.is_file():
+        workspace = load_json(ws_path)
+        project_id = find_project_id_by_root(workspace, project_root)
+        if not project_id:
+            print(
+                f"Project root not found in workspace: {project_root}\n"
+                f"Workspace: {ws_path}",
+                file=sys.stderr,
+            )
+            return 1
+        config = project_config_from_workspace(workspace, project_id)
+        config_source = f"{ws_path} (project={project_id})"
+    else:
+        config = load_mcp_config(project_root)
+
     project_id = resolve_project_id(config, project_root)
     project_label = str(config.get("projectLabel") or project_id)
     profile = resolve_profile(config, None)
@@ -908,7 +1176,7 @@ def show_project_mcp(project_root: Path) -> int:
     print(f"projectId: {project_id}")
     print(f"projectLabel: {project_label}")
     print(f"activeProfile: {profile} ({profile_doc.get('label', profile)})")
-    print(f"config: {mcp_config_path(project_root)}")
+    print(f"config: {config_source}")
     print(f"cursorMode: {'multi-project (带前缀)' if multi_mode else 'single-project (无前缀)'}")
     print("")
     print("Agent 应使用的 MCP 工具名：")
@@ -972,6 +1240,15 @@ def main() -> int:
         help="Override path to mcp.projects.json (default: ~/.cursor/mcp.projects.json)",
     )
     parser.add_argument(
+        "--workspace-config",
+        help="Override path to mcp.workspace.json (default: ~/.cursor/mcp.workspace.json)",
+    )
+    parser.add_argument(
+        "--migrate-to-workspace",
+        action="store_true",
+        help="Merge per-project mcp.config.json into ~/.cursor/mcp.workspace.json",
+    )
+    parser.add_argument(
         "--show-project-mcp",
         action="store_true",
         help="Show MCP tool name mapping for --project-root",
@@ -982,9 +1259,17 @@ def main() -> int:
     project_root = Path(args.project_root).resolve()
     skill_root = Path(args.skill_root).resolve()
     projects_registry = Path(args.projects_registry).resolve() if args.projects_registry else None
+    workspace_config = Path(args.workspace_config).resolve() if args.workspace_config else None
+
+    if args.migrate_to_workspace:
+        return migrate_to_workspace(
+            projects_registry=projects_registry,
+            workspace_path=workspace_config,
+            force=args.force,
+        )
 
     if args.show_project_mcp:
-        return show_project_mcp(project_root)
+        return show_project_mcp(project_root, workspace_config=workspace_config)
 
     if args.list_profiles:
         return list_profiles(project_root)
@@ -996,6 +1281,7 @@ def main() -> int:
             profile=args.apply_profile_all.strip().lower(),
             dry_run=args.dry_run,
             projects_registry=projects_registry,
+            workspace_config=workspace_config,
         )
 
     if args.apply_profile:
