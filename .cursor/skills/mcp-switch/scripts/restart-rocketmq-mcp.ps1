@@ -15,7 +15,8 @@ if (-not $ProjectRoot) {
     $ProjectRoot = (Get-Item (Join-Path $SkillRoot "..\..\..\..")).FullName
 }
 
-$workspacePath = if ($WorkspaceConfig) { $WorkspaceConfig } else { Join-Path $env:USERPROFILE ".cursor\mcp.workspace.json" }
+. (Join-Path $PSScriptRoot "resolve-mcp-workspace.ps1")
+$workspacePath = if ($WorkspaceConfig) { $WorkspaceConfig } else { Resolve-McpWorkspacePath -SkillRoot $SkillRoot }
 $RestartScript = "D:\mcp\restart-rocketmq-mcp.ps1"
 
 if (-not (Test-Path $workspacePath)) {

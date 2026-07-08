@@ -17,12 +17,17 @@ description: >-
 
 | 文件 | git | 作用 |
 |------|-----|------|
-| **`~/.cursor/mcp.workspace.json`** | ❌ | **推荐：全部项目 × 全部环境 单文件配置** |
+| **`~/.cursor/mcp.workspace.json`** | ❌ | 环境地址、tools 路径、项目 path（**不含密钥**） |
+| **`~/.cursor/mcp.workspace.secrets.json`** | ❌ | 密钥（密码、REDIS_URL、Token 等） |
 | [mcp.workspace.example.json](mcp.workspace.example.json) | ✅ | workspace 模板（无真实密钥） |
-| [mcp.projects.example.json](mcp.projects.example.json) | ✅ | 旧版多项目注册表（迁移用） |
-| [mcp-registry.json](mcp-registry.json) | ✅ | 服务模板 |
+| [mcp.workspace.secrets.example.json](mcp.workspace.secrets.example.json) | ✅ | secrets 模板（`change-me` 占位） |
+| [mcp-registry.json](mcp-registry.json) | ✅ | 服务模板（唯一副本） |
 | `scripts/switch-all-mcp-profiles.ps1` | ✅ | 多项目统一切换 |
+| `scripts/switch-mcp-profile.ps1` | ✅ | 单项目切换 |
 | `scripts/show-project-mcp.ps1` | ✅ | 查看当前项目 MCP 映射 |
+| `scripts/mcp-configurator.py` | ✅ | 核心配置生成 |
+| `scripts/restart-rocketmq-mcp.ps1` | ✅ | switch 后重启 rocketmq jar |
+| `scripts/reload-cursor-window.ps1` | ✅ | switch 后自动 Reload Window |
 | `~/.cursor/mcp.json` | — | Cursor **生效**配置（脚本生成，勿手改） |
 
 > 所有脚本统一读取 `~/.cursor/mcp.workspace.json`；旧版 per-project `mcp.config.json` 仅用于 `--migrate-to-workspace` 迁移。
@@ -161,7 +166,7 @@ copy .cursor\skills\shared\mcp-switch\mcp.projects.example.json $env:USERPROFILE
 切换后**必须**：
 
 1. 向用户**原文展示**脚本输出的「MCP 配置地址」区块
-2. 提示 **Reload Window**（`Ctrl+Shift+P` → Reload Window）
+2. 脚本**默认自动 Reload Window**（`reload-cursor-window.ps1` → `cursor --open-url command:workbench.action.reloadWindow`）；若需跳过加 `-NoReloadWindow`
 3. 若 profile 含 `rocketmq-mcp`，脚本会自动 **restart 本地 jar**（`-DNS_ADDR=...`）
 
 ## 固定 vs 分环境
@@ -171,7 +176,7 @@ copy .cursor\skills\shared\mcp-switch\mcp.projects.example.json $env:USERPROFILE
 | **固定** | `codegraph`、`ONES` | **不变** |
 | **分环境** | `loki-mcp`、`mysql-mcp`、`redis-mcp`、`xxl-job-mcp`、`nacos-mcp-router`、`rocketmq-mcp` | **替换** |
 
-当前环境以 `mcp.config.json` 的 `activeProfile` 为准。
+当前环境以 `mcp.workspace.json` 的 `activeProfile` 为准。
 
 ## 团队环境参数（dev / sit）
 
@@ -191,8 +196,7 @@ copy .cursor\skills\shared\mcp-switch\mcp.projects.example.json $env:USERPROFILE
 ### 1. 后端 API 层
 
 ```powershell
-D:\miniconda3\python.exe .cursor\.generated\probe-mcp-dev.py
-D:\miniconda3\python.exe .cursor\.generated\probe-mcp-dev.py sit
+python .cursor/.generated/probe-all-projects-dev.py
 ```
 
 轻量版（仅网络/认证）：
@@ -249,6 +253,7 @@ D:\miniconda3\python.exe .cursor\.generated\query-mq-via-mcp.py
 
 ## 相关
 
-- 安装与配置：[mcp-install](../mcp-install/SKILL.md)
-- 详细参考：[mcp-install/reference.md](../mcp-install/reference.md)
+- 安装与初始化：[mcp-install](../mcp-install/SKILL.md)
+- 切换/探测参考：[reference.md](reference.md)
+- 安装参考：[mcp-install/reference.md](../mcp-install/reference.md)
 - Agent 规则：`.cursor/rules/memory/mcp-environment.mdc`

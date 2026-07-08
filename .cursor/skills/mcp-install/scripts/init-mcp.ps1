@@ -23,17 +23,19 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$SkillRoot = Split-Path -Parent $PSScriptRoot
-$ProjectRoot = (Get-Item (Join-Path $SkillRoot "..\..\..\..")).FullName
-$Configurator = Join-Path $SkillRoot "..\mcp-switch\scripts\mcp-configurator.py"
-$workspacePath = Join-Path $env:USERPROFILE ".cursor\mcp.workspace.json"
+$InstallRoot = Split-Path -Parent $PSScriptRoot
+$SwitchRoot = Join-Path $InstallRoot "..\mcp-switch"
+$ProjectRoot = (Get-Item (Join-Path $InstallRoot "..\..\..\..")).FullName
+$Configurator = Join-Path $SwitchRoot "scripts\mcp-configurator.py"
+. (Join-Path $SwitchRoot "scripts\resolve-mcp-workspace.ps1")
+$workspacePath = Resolve-McpWorkspacePath -SkillRoot $SwitchRoot
 
 if (-not (Test-Path $Configurator)) {
     throw "Configurator not found: $Configurator"
 }
 
 if (-not (Test-Path $workspacePath)) {
-    throw "Missing $workspacePath. Copy mcp-switch/mcp.workspace.example.json to ~/.cursor/mcp.workspace.json and edit."
+    throw "Missing $workspacePath. Copy mcp-switch/mcp.workspace.example.json to mcp-switch/mcp.workspace.json and edit."
 }
 
 $python = Get-Command python -ErrorAction SilentlyContinue
@@ -43,7 +45,7 @@ if (-not $python) { throw "Python not found. Install Python 3 to run mcp-configu
 $argsList = @(
     $Configurator,
     "--project-root", $ProjectRoot,
-    "--skill-root", (Join-Path $SkillRoot "..\mcp-switch"),
+    "--skill-root", $SwitchRoot,
     "--target", $Target,
     "--mode", $Mode,
     "--workspace-config", $workspacePath

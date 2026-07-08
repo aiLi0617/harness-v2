@@ -1,145 +1,135 @@
 ---
 name: mcp-install
 description: >-
-  Install and configure Cursor MCP from mcp.config.json + mcp-registry.
-  Use for MCP onboarding, first-time setup, editing mcp.config.json,
-  installing loki/mysql/redis/xxl-job/nacos/rocketmq/ONES/codegraph,
-  enabling optional MCPs, or init-mcp.
+  Install and bootstrap Cursor MCP for new team members.
+  Use for MCP onboarding, first-time setup, installing loki/mysql/redis/xxl-job/nacos/rocketmq/ONES/codegraph,
+  creating mcp.workspace.json, prerequisite checks, bootstrap-mcp, or init-mcp.
 ---
 
 # MCP 安装（mcp-install）
 
-从 **注册表 + 单文件配置** 生成 `~/.cursor/mcp.json`。脚本与本 skill 同目录。
+**职责边界：**
 
-> 日常切换 dev/sit/pre 请用 **[mcp-switch](../mcp-switch/SKILL.md)**，不要在本 skill 里重复执行 switch。
+| Skill | 做什么 | 不做什么 |
+|-------|--------|----------|
+| **mcp-install**（本 skill） | 本机依赖检查、生成 workspace、安装二进制/jar、首次 init | 日常 dev/sit/pre 切换 |
+| **mcp-switch** | 读取 workspace → 生成 `~/.cursor/mcp.json`、重启 rocketmq jar | 安装二进制 |
+
+> 日常切换环境：**[mcp-switch](../mcp-switch/SKILL.md)**
 
 ## 文件一览
 
 | 文件 | git | 作用 |
 |------|-----|------|
-| `.cursor/mcp.config.json` | ❌ | 唯一用户配置（密钥、`activeProfile`、各环境 env） |
-| `.cursor/mcp.config.example.json` | ✅ | 模板 |
-| [mcp-registry.json](mcp-registry.json) | ✅ | 服务模板（install、stdio/http 启动方式） |
-| [mcp-switch/mcp.projects.example.json](../mcp-switch/mcp.projects.example.json) | ✅ | 多项目注册表模板 |
-| `.cursor/.generated/xxl-job-<profile>.yaml` | ❌ | switch 时由 configurator 自动生成 |
-| `scripts/init-mcp.ps1` | ✅ | 生成/合并 MCP 配置 |
-| `~/.cursor/mcp.json` | — | Cursor **生效**配置（脚本生成，勿手改） |
+| **`~/.cursor/mcp.workspace.json`** | ❌ | 环境地址、tools 路径、项目 path（**不含密钥**） |
+| **`~/.cursor/mcp.workspace.secrets.json`** | ❌ | 密钥（密码、REDIS_URL、Token 等） |
+| [mcp-switch/mcp.workspace.example.json](../mcp-switch/mcp.workspace.example.json) | ✅ | workspace 模板（无密钥） |
+| [mcp-switch/mcp.workspace.secrets.example.json](../mcp-switch/mcp.workspace.secrets.example.json) | ✅ | secrets 模板（`change-me` 占位） |
+| [mcp-switch/mcp-registry.json](../mcp-switch/mcp-registry.json) | ✅ | MCP 服务启动模板（唯一副本） |
+| `scripts/bootstrap-mcp.ps1` | ✅ | **新成员入口**：依赖检查 + 生成 workspace/secrets |
+| `scripts/init-mcp.ps1` | ✅ | 单项目 init（需已有 workspace） |
+| `scripts/init-mcp.sh` | ✅ | init-mcp.ps1 的 Unix 版 |
+| `~/.cursor/mcp.json` | — | Cursor **生效**配置（mcp-switch 生成，勿手改） |
 
-> 切换脚本见 **[mcp-switch/scripts/](../mcp-switch/SKILL.md)**；`mcp-install/scripts/switch-*.ps1` 为兼容转发。
+## 新成员 Onboarding（推荐）
 
-## 首次配置
+### 1. 安装本机依赖
+
+| 依赖 | 用途 | 安装方式 |
+|------|------|----------|
+| Python 3 | configurator、探测脚本 | miniconda / 官方安装包 |
+| Node.js 20+ | mysql-mcp（npx） | 官方 / nvm |
+| uv / uvx | redis、xxl-job、nacos MCP | `pip install uv` 或 miniconda |
+| Java 17+ | rocketmq-mcp jar | JDK 17 |
+| loki-mcp 二进制 | Loki 日志 MCP | 见 [reference.md — Loki](reference.md) |
+| codegraph（可选） | 代码图谱 | `npm i -g codegraph` + 项目内 `codegraph init` |
+| pymysql、redis（可选） | 连通性探测 | `pip install pymysql redis` |
+
+### 2. 一键引导
+
+在**任意已 clone 的项目**（如经纪商）根目录执行：
 
 ```powershell
-copy .cursor\mcp.config.example.json .cursor\mcp.config.json
-# 多项目时设置 projectId / projectLabel
-# 多项目注册表（用户目录，勿提交 git）：
-copy .cursor\skills\shared\mcp-switch\mcp.projects.example.json $env:USERPROFILE\.cursor\mcp.projects.json
+# 仅生成 workspace（默认 broker 路径 = 当前项目）
+.cursor/skills/shared/mcp-install/scripts/bootstrap-mcp.ps1
+
+# 三项目路径一并写入
+.cursor/skills/shared/mcp-install/scripts/bootstrap-mcp.ps1 `
+  -BrokerRoot D:\project\zfnjjs-two `
+  -CloudRoot D:\project\yunshang-project `
+  -B2cRoot D:\project\BToC
+
+# 填好密钥后，引导 + 首次 switch
+.cursor/skills/shared/mcp-install/scripts/bootstrap-mcp.ps1 -SwitchDev
+```
+
+### 3. 填写 workspace
+
+编辑两个文件（均在 `~/.cursor/`，**勿提交 git**）：
+
+1. **`mcp.workspace.json`** — 确认 `tools` 路径、`projects.*.path`
+2. **`mcp.workspace.secrets.json`** — 将 `change-me` 替换为团队密钥
+
+团队环境地址（Loki/MySQL host 等）已在 workspace 模板中预填；新成员通常**只需填 secrets + 本机路径**。
+
+### 4. 切换环境（交给 mcp-switch）
+
+```powershell
 .cursor/skills/shared/mcp-switch/scripts/switch-all-mcp-profiles.ps1 dev
 ```
 
-改 `mcp.config.json` 或 registry 后：**init 或 switch → Reload Window**。
+`Ctrl+Shift+P` → **Reload Window**
 
-## 当前启用的 MCP（dev / sit / pre）
+### 5. 验证连通性
 
-| MCP ID | 说明 | 仓库 |
-|--------|------|------|
-| `codegraph` | 代码知识图谱（固定） | https://github.com/colbymchenry/codegraph |
-| `ONES` | 项目/Wiki（固定） | https://sz.ones.cn/mcp |
-| `loki-mcp` | Loki 日志 | https://github.com/grafana/loki-mcp |
-| `mysql-mcp` | MySQL | https://github.com/benborla/mcp-server-mysql |
-| `redis-mcp` | Redis | https://github.com/redis/mcp-redis |
-| `xxl-job-mcp` | XXL-JOB 调度 | https://github.com/zz-wenzb/xxl-job-mcp |
-| `nacos-mcp-router` | Nacos 路由/代理 | https://github.com/nacos-group/nacos-mcp-router |
-| `rocketmq-mcp` | RocketMQ 管理（HTTP SSE） | https://github.com/francisoliverlee/rocketmq-mcp |
+```powershell
+python .cursor/.generated/probe-all-projects-dev.py
+```
 
-## 可选 MCP（registry 有模板，默认未启用）
+## 当前启用的 MCP
 
-| MCP ID | 说明 | 启用方式 |
+| MCP ID | 说明 | 安装方式 |
 |--------|------|----------|
-| `elasticsearch-mcp` | Elasticsearch 官方 MCP | 加入 `profiles.*.servers`，配置 `ES_URL` + 认证，再 switch |
-| `feishu-cli` | 飞书（**非 MCP**） | 终端 `lark-cli` + Skills |
+| `codegraph` | 代码知识图谱（固定） | npm 全局 + `codegraph init` |
+| `ONES` | 项目/Wiki（固定） | Cursor OAuth，无需本地安装 |
+| `loki-mcp` | Loki 日志 | 本地二进制 + `LOKI_URL` |
+| `mysql-mcp` | MySQL | npx 自动拉包 |
+| `redis-mcp` | Redis | uvx 自动拉包 |
+| `xxl-job-mcp` | XXL-JOB | uvx from GitHub |
+| `nacos-mcp-router` | Nacos 路由 | uvx 自动拉包 |
+| `rocketmq-mcp` | RocketMQ（HTTP SSE） | **本地 jar** + switch 时 restart |
 
-## 配置结构
+## workspace 结构（摘要）
 
 ```json
 {
   "activeProfile": "dev",
+  "tools": { "UVX_BIN": "...", "NPX_BIN": "...", "LOKI_MCP_BIN": "..." },
   "fixedServers": ["codegraph", "ONES"],
-  "profiles": {
-    "dev": {
-      "servers": ["loki-mcp", "mysql-mcp", "redis-mcp", "xxl-job-mcp", "nacos-mcp-router", "rocketmq-mcp"],
-      "env": {
-        "LOKI_URL": "...",
-        "MYSQL_HOST": "...",
-        "REDIS_URL": "...",
-        "ROCKETMQ_MCP_URL": "http://127.0.0.1:6868/sse",
-        "ROCKETMQ_NS_ADDR": "192.168.3.25:9876"
-      }
-    }
+  "projects": {
+    "broker": { "path": "D:/project/zfnjjs-two", "profiles": { "dev": {...}, "sit": {...} } },
+    "cloud":  { ... },
+    "b2c":    { ... }
   }
 }
 ```
 
-### 固定 vs 分环境
+## 启用 / 禁用 MCP
 
-| 类型 | MCP | 切换 profile |
-|------|-----|--------------|
-| **固定** | `codegraph`、`ONES` | **不变** |
-| **分环境** | `loki-mcp`、`mysql-mcp`、`redis-mcp`、`xxl-job-mcp`、`nacos-mcp-router`、`rocketmq-mcp` | **替换**（见 mcp-switch） |
+编辑 workspace / secrets 中对应 project 的 `profiles.<env>.servers` 与 env，再执行 **mcp-switch**（见 [mcp-switch/SKILL.md](../mcp-switch/SKILL.md)）。
 
-## 各服务 env 要点
-
-| 服务 | 关键配置 | 注意 |
-|------|----------|------|
-| loki-mcp | `LOKI_MCP_BIN` + `LOKI_URL` | stdio；验证 `/ready` |
-| mysql-mcp | `MYSQL_*` | `MYSQL_DB` 留空 = 多库（dev/sit 均如此） |
-| redis-mcp | `REDIS_URL` | `redis://:password@host:6379/db`；密码原文，勿 `%3E` |
-| xxl-job-mcp | `XXL_JOB_*` | switch 生成 yaml；registry pin `fastmcp==2.2.0` |
-| nacos-mcp-router | `NACOS_*` | namespace 填 UUID；路由型 MCP |
-| rocketmq-mcp | `ROCKETMQ_MCP_URL` + `ROCKETMQ_NS_ADDR` | jar 本地进程；**AK/SK 可选** |
-| ONES | `fixedEnv.ONES_MCP_URL` | Cursor OAuth |
-| codegraph | fixedServers | 需 `codegraph init` 后才有工具 |
-
-> **Redis 易错**：无 ACL 时用 `redis://:password@host:port/db`，**不要**写 `redis://root:password@...`。
-
-## 启用 / 禁用可选 MCP
-
-在 `mcp.config.json` 对应 profile 的 `servers` 数组追加或移除 ID，补齐 env 后执行 switch（见 mcp-switch）：
-
-```json
-"servers": [..., "elasticsearch-mcp"],
-"env": {
-  "ES_URL": "http://192.168.3.25:9200",
-  "ES_API_KEY": "..."
-}
-```
-
-禁用 rocketmq：从 `servers` 移除 `rocketmq-mcp` 后 switch（会自动 stop 本地 jar）。
-
-## MCP 服务安装
-
-详见 [reference.md](reference.md)；常用：
-
-- **loki**：`LOKI_MCP_BIN` + `LOKI_URL`
-- **mysql**：Node 20+，`NPX_BIN`
-- **redis**：`uvx --from redis-mcp-server redis-mcp-server --url "redis://:password@host:6379/db"`
-- **xxl-job**：`uvx --with fastmcp==2.2.0 --from git+https://github.com/zz-wenzb/xxl-job-mcp xxl-job-mcp --config <yaml>`
-- **nacos**：`uvx nacos-mcp-router@latest`（首次启动可能较慢）
-- **rocketmq**：本地 `D:\mcp\rocketmq-mcp\build.ps1`（Java 17）→ jar 监听 6868
-
-构建与部署 rocketmq jar 见 [reference.md — RocketMQ MCP](reference.md#rocketmq-mcp) 与 `D:\mcp\README.md`。
-
-## init 命令
+## init 命令（已有 workspace 时，高级）
 
 ```powershell
 .cursor/skills/shared/mcp-install/scripts/init-mcp.ps1 -ListProfiles
 .cursor/skills/shared/mcp-install/scripts/init-mcp.ps1 -Profile dev
 ```
 
-配置就绪后，用 **mcp-switch** 切换环境并验证连通性。
+> 日常切换请直接用 `mcp-switch/scripts/switch-all-mcp-profiles.ps1`，不要用 init。
 
 ## 相关
 
 - 环境切换：[mcp-switch](../mcp-switch/SKILL.md)
+- 安装细节：[reference.md](reference.md)
+- 切换/探测细节：[mcp-switch/reference.md](../mcp-switch/reference.md)
 - Agent 规则：`.cursor/rules/memory/mcp-environment.mdc`
-- 故障排查：[reference.md](reference.md)

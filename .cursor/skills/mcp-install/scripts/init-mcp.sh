@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 根据 profile + mcp-registry 生成/合并 Cursor MCP 配置
+# 根据 workspace + mcp-registry 生成/合并 Cursor MCP 配置
 set -euo pipefail
 
 TARGET="user"
@@ -16,7 +16,7 @@ Usage:
   init-mcp.sh [user|project] [options]
 
 Options:
-  --profile NAME     dev | pre (dev 含 sit)
+  --profile NAME     dev | sit | pre
   --mode MODE        single (default) | unified
   --servers A,B,C    override server list
   --dry-run
@@ -40,16 +40,29 @@ while [[ $# -gt 0 ]]; do
 done
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SKILL_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-PROJECT_ROOT="$(cd "$SKILL_ROOT/../../../.." && pwd)"
-CONFIGURATOR="$SCRIPT_DIR/mcp-configurator.py"
+INSTALL_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+SWITCH_ROOT="$(cd "$INSTALL_ROOT/../mcp-switch" && pwd)"
+PROJECT_ROOT="$(cd "$INSTALL_ROOT/../../../.." && pwd)"
+CONFIGURATOR="$SWITCH_ROOT/scripts/mcp-configurator.py"
+WORKSPACE="$SWITCH_ROOT/mcp.workspace.json"
+LEGACY_WORKSPACE="${HOME}/.cursor/mcp.workspace.json"
+
+if [[ ! -f "$WORKSPACE" && -f "$LEGACY_WORKSPACE" ]]; then
+  echo "Using legacy $LEGACY_WORKSPACE — copy to $WORKSPACE to finish migration" >&2
+  WORKSPACE="$LEGACY_WORKSPACE"
+fi
 
 PYTHON="${PYTHON:-python3}"
 if ! command -v "$PYTHON" >/dev/null 2>&1; then
   PYTHON=python
 fi
 
-ARGS=(--project-root "$PROJECT_ROOT" --skill-root "$SKILL_ROOT" --target "$TARGET" --mode "$MODE")
+if [[ ! -f "$WORKSPACE" ]]; then
+  echo "Missing $WORKSPACE. Run bootstrap-mcp.ps1 or copy mcp.workspace.example.json first." >&2
+  exit 1
+fi
+
+ARGS=(--project-root "$PROJECT_ROOT" --skill-root "$SWITCH_ROOT" --target "$TARGET" --mode "$MODE" --workspace-config "$WORKSPACE")
 
 if $LIST; then
   exec "$PYTHON" "$CONFIGURATOR" "${ARGS[@]}" --list-profiles

@@ -203,18 +203,158 @@ def resolve_value(value: Any, env_map: dict[str, str], registry_defaults: dict[s
 
 DEPRECATED_MANAGED_KEYS = frozenset({"feishu-mcp"})
 SHARED_MCP_IDS = frozenset({"ONES", "codegraph"})
+SECRET_ENV_KEYS = frozenset(
+    {
+        "MYSQL_PASS",
+        "REDIS_URL",
+        "REDIS_PWD",
+        "REDIS_PASSWORD",
+        "NACOS_PASSWORD",
+        "LOKI_PASSWORD",
+        "LOKI_TOKEN",
+        "LOKI_ORG_ID",
+        "XXL_JOB_PASSWORD",
+        "XXL_JOB_ACCESS_TOKEN",
+        "ROCKETMQ_AK",
+        "ROCKETMQ_SK",
+        "ELASTICSEARCH_PASSWORD",
+        "ELASTICSEARCH_API_KEY",
+        "ES_PASSWORD",
+        "ES_API_KEY",
+    }
+)
 
 
 def projects_registry_path() -> Path:
     return Path.home() / ".cursor" / "mcp.projects.json"
 
 
-def workspace_config_path() -> Path:
-    return Path.home() / ".cursor" / "mcp.workspace.json"
+def resolve_workspace_config_path(skill_root: Path | None = None) -> Path:
+    if skill_root is not None:
+        local = skill_root / "mcp.workspace.json"
+        if local.is_file():
+            return local
+    legacy = Path.home() / ".cursor" / "mcp.workspace.json"
+    if legacy.is_file():
+        return legacy
+    if skill_root is not None:
+        return skill_root / "mcp.workspace.json"
+    return legacy
 
 
-def save_workspace_config(workspace: dict[str, Any], path: Path | None = None) -> None:
-    out = path or workspace_config_path()
+def resolve_workspace_secrets_path(
+    workspace_path: Path | None = None,
+    skill_root: Path | None = None,
+) -> Path:
+    if workspace_path is not None:
+        adjacent = workspace_path.parent / "mcp.workspace.secrets.json"
+        if adjacent.is_file():
+            return adjacent
+    if skill_root is not None:
+        local = skill_root / "mcp.workspace.secrets.json"
+        if local.is_file():
+            return local
+    legacy = Path.home() / ".cursor" / "mcp.workspace.secrets.json"
+    if legacy.is_file():
+        return legacy
+    if workspace_path is not None:
+        return workspace_path.parent / "mcp.workspace.secrets.json"
+    if skill_root is not None:
+        return skill_root / "mcp.workspace.secrets.json"
+    return legacy
+
+
+def workspace_config_path(skill_root: Path | None = None) -> Path:
+    return resolve_workspace_config_path(skill_root)
+
+
+def workspace_secrets_path(
+    workspace_path: Path | None = None,
+    skill_root: Path | None = None,
+) -> Path:
+    return resolve_workspace_secrets_path(workspace_path, skill_root)
+
+
+def workspace_secrets_example_path(skill_root: Path) -> Path:
+    return skill_root / "mcp.workspace.secrets.example.json"
+
+
+def deep_merge_env(target: dict[str, Any], overlay: dict[str, Any]) -> None:
+    for key, value in overlay.items():
+        if isinstance(value, dict) and isinstance(target.get(key), dict):
+            deep_merge_env(target[key], value)
+        else:
+            target[key] = value
+
+
+def apply_secrets_to_workspace(workspace: dict[str, Any], secrets: dict[str, Any]) -> None:
+    for project_id, project_secrets in (secrets.get("projects") or {}).items():
+        project = (workspace.get("projects") or {}).get(project_id)
+        if not isinstance(project, dict):
+            continue
+        for profile_name, profile_secrets in (project_secrets.get("profiles") or {}).items():
+            profile = (project.get("profiles") or {}).get(profile_name)
+            if not isinstance(profile, dict):
+                continue
+            env_overlay = profile_secrets.get("env") or {}
+            if not env_overlay:
+                continue
+            profile.setdefault("env", {})
+            profile["env"].update(env_overlay)
+
+
+def load_workspace(
+    workspace_path: Path | None = None,
+    secrets_path: Path | None = None,
+    skill_root: Path | None = None,
+) -> dict[str, Any]:
+    ws_path = workspace_path or resolve_workspace_config_path(skill_root)
+    workspace = load_json(ws_path)
+    sec_path = secrets_path or resolve_workspace_secrets_path(ws_path, skill_root)
+    if sec_path.is_file():
+        apply_secrets_to_workspace(workspace, load_json(sec_path))
+    return workspace
+
+
+def extract_secrets_from_workspace(workspace: dict[str, Any]) -> dict[str, Any]:
+    secrets: dict[str, Any] = {"projects": {}}
+    for project_id, project in (workspace.get("projects") or {}).items():
+        project_secrets: dict[str, Any] = {"profiles": {}}
+        for profile_name, profile in (project.get("profiles") or {}).items():
+            env = profile.get("env") or {}
+            secret_env = {k: v for k, v in env.items() if k in SECRET_ENV_KEYS and v}
+            if secret_env:
+                project_secrets["profiles"][profile_name] = {"env": secret_env}
+        if project_secrets["profiles"]:
+            secrets["projects"][project_id] = project_secrets
+    return secrets
+
+
+def strip_secrets_from_workspace(workspace: dict[str, Any]) -> None:
+    for project in (workspace.get("projects") or {}).values():
+        for profile in (project.get("profiles") or {}).values():
+            env = profile.get("env") or {}
+            for key in list(env.keys()):
+                if key in SECRET_ENV_KEYS:
+                    del env[key]
+
+
+def save_workspace_secrets(
+    secrets: dict[str, Any],
+    path: Path | None = None,
+    skill_root: Path | None = None,
+) -> None:
+    out = path or resolve_workspace_secrets_path(skill_root=skill_root)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(secrets, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def save_workspace_config(
+    workspace: dict[str, Any],
+    path: Path | None = None,
+    skill_root: Path | None = None,
+) -> None:
+    out = path or resolve_workspace_config_path(skill_root)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(workspace, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
@@ -292,7 +432,7 @@ def workspace_missing_message(workspace_path: Path) -> str:
     return (
         f"Missing {workspace_path}. "
         "Copy .cursor/skills/shared/mcp-switch/mcp.workspace.example.json "
-        "to ~/.cursor/mcp.workspace.json and edit."
+        "to .cursor/skills/shared/mcp-switch/mcp.workspace.json and edit."
     )
 
 
@@ -317,7 +457,7 @@ def load_project_config(
     if not ws_path.is_file():
         raise FileNotFoundError(workspace_missing_message(ws_path))
 
-    workspace = load_json(ws_path)
+    workspace = load_workspace(ws_path)
     project_id = find_project_id_by_root(workspace, project_root)
     if not project_id:
         raise FileNotFoundError(
@@ -961,7 +1101,7 @@ def apply_all_from_workspace(
         print("Multi-project switch only supports --target user", file=sys.stderr)
         return 1
 
-    workspace = load_json(workspace_path)
+    workspace = load_workspace(workspace_path)
     projects = workspace.get("projects") or {}
     if not projects:
         print("No projects in workspace config.", file=sys.stderr)
@@ -1054,7 +1194,7 @@ def apply_all_from_workspace(
     print("")
     print("--- 当前项目如何找 MCP ---")
     print("  1. 打开目标项目工作区")
-    print("  2. 读 ~/.cursor/mcp.workspace.json 中对应 projectId")
+    print("  2. 读 mcp-switch/mcp.workspace.json 中对应 projectId")
     print("  3. 分环境工具名 = {projectId}-<服务>，如 broker-mysql-mcp")
     print("  4. 共享工具：ONES、codegraph（无前缀）")
     print("  5. 运行 show-project-mcp.ps1 查看完整映射")
@@ -1192,7 +1332,7 @@ def apply_all_projects_profile(
     print("")
     print("--- 当前项目如何找 MCP ---")
     print("  1. 打开目标项目工作区")
-    print("  2. 读 ~/.cursor/mcp.workspace.json 中对应 projectId")
+    print("  2. 读 mcp-switch/mcp.workspace.json 中对应 projectId")
     print("  3. 分环境工具名 = {projectId}-<服务>，如 broker-mysql-mcp")
     print("  4. 共享工具：ONES、codegraph（无前缀）")
     print("  5. 运行 show-project-mcp.ps1 查看完整映射")
@@ -1265,6 +1405,93 @@ def list_profiles(
     return 0
 
 
+def detect_tools_dict() -> dict[str, str]:
+    return augment_tool_paths({})
+
+
+def init_workspace_config(
+    skill_root: Path,
+    workspace_path: Path | None = None,
+    project_paths: dict[str, str] | None = None,
+    force: bool = False,
+) -> int:
+    out_path = workspace_path or resolve_workspace_config_path(skill_root)
+    example_path = skill_root / "mcp.workspace.example.json"
+    if not example_path.is_file():
+        print(f"Missing template: {example_path}", file=sys.stderr)
+        return 1
+    if out_path.is_file() and not force:
+        print(f"Already exists: {out_path}. Pass --force to overwrite.", file=sys.stderr)
+        return 1
+
+    workspace = load_json(example_path)
+    workspace["tools"] = detect_tools_dict()
+
+    for project_id, raw_path in (project_paths or {}).items():
+        entry = (workspace.get("projects") or {}).get(project_id)
+        if not entry:
+            continue
+        entry["path"] = str(Path(raw_path).expanduser().resolve()).replace("\\", "/")
+
+    save_workspace_config(workspace, out_path)
+
+    secrets_out = resolve_workspace_secrets_path(out_path, skill_root)
+    secrets_example = workspace_secrets_example_path(skill_root)
+    if secrets_example.is_file() and (not secrets_out.is_file() or force):
+        secrets_out.write_text(secrets_example.read_text(encoding="utf-8"), encoding="utf-8")
+        print(f"Created: {secrets_out}")
+    elif not secrets_out.is_file():
+        print(f"Hint: copy {secrets_example} -> {secrets_out} and fill secrets")
+
+    print(f"Created: {out_path}")
+    print("")
+    print("--- 下一步 ---")
+    print(f"  1. 编辑 {secrets_out}，将 change-me 替换为团队密钥")
+    print("  2. 确认 workspace 中 projects.*.path 为本机代码库绝对路径")
+    print("  3. 安装本机依赖：loki-mcp 二进制、rocketmq jar（见 mcp-install/SKILL.md）")
+    print("  4. 运行 mcp-switch/scripts/switch-all-mcp-profiles.ps1 dev")
+    print("  5. Reload Window，再运行 .cursor/.generated/probe-all-projects-dev.py")
+    return 0
+
+
+def extract_workspace_secrets(
+    workspace_path: Path | None = None,
+    secrets_path: Path | None = None,
+    force: bool = False,
+) -> int:
+    ws_path = workspace_path or workspace_config_path()
+    sec_path = secrets_path or workspace_secrets_path()
+    if not ws_path.is_file():
+        print(f"Missing {ws_path}", file=sys.stderr)
+        return 1
+    if sec_path.is_file() and not force:
+        print(f"Already exists: {sec_path}. Pass --force to overwrite.", file=sys.stderr)
+        return 1
+
+    workspace = load_json(ws_path)
+    secrets = extract_secrets_from_workspace(workspace)
+    if not secrets.get("projects"):
+        print("No secret keys found in workspace env.", file=sys.stderr)
+        return 1
+
+    save_workspace_secrets(secrets, sec_path)
+    strip_secrets_from_workspace(workspace)
+    save_workspace_config(workspace, ws_path)
+    print(f"Extracted secrets -> {sec_path}")
+    print(f"Sanitized workspace -> {ws_path}")
+    return 0
+
+
+def print_detect_tools() -> int:
+    tools = detect_tools_dict()
+    print(json.dumps(tools, indent=2, ensure_ascii=False))
+    for key, value in tools.items():
+        exists = Path(value).is_file() if (":" in value or value.startswith("/")) else bool(shutil.which(value))
+        mark = "OK" if exists else "MISSING"
+        print(f"{mark}: {key} -> {value}", file=sys.stderr)
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate Cursor MCP config with profile support")
     parser.add_argument("--project-root", required=True)
@@ -1287,17 +1514,38 @@ def main() -> int:
     )
     parser.add_argument(
         "--workspace-config",
-        help="Override path to mcp.workspace.json (default: ~/.cursor/mcp.workspace.json)",
+        help="Override path to mcp.workspace.json (default: mcp-switch/mcp.workspace.json)",
     )
     parser.add_argument(
         "--migrate-to-workspace",
         action="store_true",
-        help="Merge per-project mcp.config.json into ~/.cursor/mcp.workspace.json",
+        help="Merge per-project mcp.config.json into mcp-switch/mcp.workspace.json",
     )
     parser.add_argument(
         "--show-project-mcp",
         action="store_true",
         help="Show MCP tool name mapping for --project-root",
+    )
+    parser.add_argument(
+        "--extract-secrets",
+        action="store_true",
+        help="Move secret env keys from workspace to mcp.workspace.secrets.json",
+    )
+    parser.add_argument(
+        "--init-workspace",
+        action="store_true",
+        help="Create mcp-switch/mcp.workspace.json from template with auto-detected tools",
+    )
+    parser.add_argument(
+        "--detect-tools",
+        action="store_true",
+        help="Print auto-detected tool paths for workspace tools section",
+    )
+    parser.add_argument(
+        "--project-path",
+        action="append",
+        metavar="ID=PATH",
+        help="With --init-workspace: set projects.<id>.path (repeatable)",
     )
     parser.add_argument("--list-profiles", action="store_true")
     args = parser.parse_args()
@@ -1305,12 +1553,40 @@ def main() -> int:
     project_root = Path(args.project_root).resolve()
     skill_root = Path(args.skill_root).resolve()
     projects_registry = Path(args.projects_registry).resolve() if args.projects_registry else None
-    workspace_config = Path(args.workspace_config).resolve() if args.workspace_config else None
+    workspace_config = (
+        Path(args.workspace_config).resolve()
+        if args.workspace_config
+        else resolve_workspace_config_path(skill_root)
+    )
 
     if args.migrate_to_workspace:
         return migrate_to_workspace(
             projects_registry=projects_registry,
             workspace_path=workspace_config,
+            force=args.force,
+        )
+
+    if args.extract_secrets:
+        return extract_workspace_secrets(
+            workspace_path=workspace_config,
+            force=args.force,
+        )
+
+    if args.detect_tools:
+        return print_detect_tools()
+
+    if args.init_workspace:
+        project_paths: dict[str, str] = {}
+        for item in args.project_path or []:
+            if "=" not in item:
+                print(f"Invalid --project-path (expected ID=PATH): {item}", file=sys.stderr)
+                return 1
+            project_id, raw_path = item.split("=", 1)
+            project_paths[project_id.strip()] = raw_path.strip()
+        return init_workspace_config(
+            skill_root=skill_root,
+            workspace_path=workspace_config,
+            project_paths=project_paths or None,
             force=args.force,
         )
 

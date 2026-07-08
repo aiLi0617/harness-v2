@@ -17,7 +17,8 @@ if (-not $ProjectRoot) {
     $ProjectRoot = (Get-Item (Join-Path $SkillRoot "..\..\..\..")).FullName
 }
 $Configurator = Join-Path $PSScriptRoot "mcp-configurator.py"
-$workspacePath = Join-Path $env:USERPROFILE ".cursor\mcp.workspace.json"
+. (Join-Path $PSScriptRoot "resolve-mcp-workspace.ps1")
+$workspacePath = Resolve-McpWorkspacePath -SkillRoot $SkillRoot
 
 $python = Get-Command python -ErrorAction SilentlyContinue
 if (-not $python) { $python = Get-Command python3 -ErrorAction SilentlyContinue }

@@ -7,17 +7,20 @@ param(
     [ValidateSet("user", "project")]
     [string]$Target = "user",
 
-    [switch]$DryRun
+    [switch]$DryRun,
+
+    [switch]$NoReloadWindow
 )
 
 $ErrorActionPreference = "Stop"
 $SkillRoot = Split-Path -Parent $PSScriptRoot
 $ProjectRoot = (Get-Item (Join-Path $SkillRoot "..\..\..\..")).FullName
 $Configurator = Join-Path $PSScriptRoot "mcp-configurator.py"
-$workspacePath = Join-Path $env:USERPROFILE ".cursor\mcp.workspace.json"
+. (Join-Path $PSScriptRoot "resolve-mcp-workspace.ps1")
+$workspacePath = Resolve-McpWorkspacePath -SkillRoot $SkillRoot
 
 if (-not (Test-Path $workspacePath)) {
-    throw "Missing $workspacePath. Copy mcp-switch/mcp.workspace.example.json to ~/.cursor/mcp.workspace.json and edit."
+    throw "Missing $workspacePath. Copy mcp-switch/mcp.workspace.example.json to mcp-switch/mcp.workspace.json and edit."
 }
 
 $python = Get-Command python -ErrorAction SilentlyContinue
@@ -41,10 +44,24 @@ if ($LASTEXITCODE -eq 0 -and -not $DryRun) {
         & $RocketMqRestart -Profile $Profile -ProjectRoot $ProjectRoot -WorkspaceConfig $workspacePath
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
-    Write-Host ""
-    Write-Host "========================================"
-    Write-Host "  请 Reload Window 使配置生效："
-    Write-Host "  Ctrl+Shift+P -> 输入 Reload Window -> 回车"
-    Write-Host "========================================"
+    $ReloadScript = Join-Path $PSScriptRoot "reload-cursor-window.ps1"
+    if ($NoReloadWindow) {
+        Write-Host ""
+        Write-Host "========================================"
+        Write-Host "  请 Reload Window 使配置生效："
+        Write-Host "  Ctrl+Shift+P -> 输入 Reload Window -> 回车"
+        Write-Host "  （或去掉 -NoReloadWindow 以自动触发）"
+        Write-Host "========================================"
+    }
+    elseif (Test-Path $ReloadScript) {
+        & $ReloadScript
+    }
+    else {
+        Write-Host ""
+        Write-Host "========================================"
+        Write-Host "  请 Reload Window 使配置生效："
+        Write-Host "  Ctrl+Shift+P -> 输入 Reload Window -> 回车"
+        Write-Host "========================================"
+    }
 }
 exit $LASTEXITCODE

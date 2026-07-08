@@ -1,0 +1,287 @@
+{
+  "activeProfile": "pre",
+  "defaultProfile": "dev",
+  "fixedServers": [
+    "codegraph",
+    "ONES"
+  ],
+  "fixedEnv": {
+    "ONES_MCP_URL": "https://sz.ones.cn/mcp"
+  },
+  "tools": {
+    "UVX_BIN": "D:\\miniconda3\\Scripts\\uvx.exe",
+    "NPX_BIN": "D:\\tool\\node\\npx.cmd",
+    "LOKI_MCP_BIN": "C:\\Users\\25143\\Documents\\Codex\\bin\\loki-mcp.exe",
+    "CODEGRAPH_BIN": "C:\\Users\\25143\\AppData\\Roaming\\npm\\codegraph.cmd"
+  },
+  "projects": {
+    "broker": {
+      "label": "经纪商",
+      "path": "D:/project/zfnjjs-two",
+      "profiles": {
+        "dev": {
+          "label": "本地开发",
+          "servers": [
+            "loki-mcp",
+            "mysql-mcp",
+            "redis-mcp",
+            "xxl-job-mcp",
+            "nacos-mcp-router",
+            "rocketmq-mcp"
+          ],
+          "env": {
+            "LOKI_URL": "http://192.168.3.25:3100",
+            "MYSQL_HOST": "192.168.3.8",
+            "MYSQL_PORT": "3306",
+            "MYSQL_DB": "",
+            "MYSQL_USER": "developer",
+            "NACOS_ADDR": "192.168.3.25:8848",
+            "NACOS_USERNAME": "app",
+            "NACOS_NAMESPACE": "802e8b2e-7a3e-419b-8fe2-b623130de0ff",
+            "XXL_JOB_ADMIN_ADDRESS": "http://xxl-job.dev-ys-broker.com/xxl-job-admin",
+            "XXL_JOB_USERNAME": "admin",
+            "ROCKETMQ_MCP_URL": "http://127.0.0.1:6868/sse",
+            "ROCKETMQ_NS_ADDR": "192.168.3.25:9876",
+            "MYSQL_PASS": "LJ1jYgJGnbf30Y6pxYf2",
+            "REDIS_URL": "redis://:NKCMoPyC>CRzfn2oQ2qL@192.168.3.25:6379/1",
+            "NACOS_PASSWORD": "vxRNo0i16TRoMdeAOZR5i",
+            "XXL_JOB_PASSWORD": "JHjHZP$SHIjzj123"
+          },
+          "notes": "elasticsearch-mcp 暂不用；ROCKETMQ_AK/SK 可选（无 ACL 可不配）"
+        },
+        "sit": {
+          "label": "SIT 环境",
+          "servers": [
+            "loki-mcp",
+            "mysql-mcp",
+            "redis-mcp",
+            "xxl-job-mcp",
+            "nacos-mcp-router",
+            "rocketmq-mcp"
+          ],
+          "env": {
+            "LOKI_URL": "http://192.168.3.25:3100",
+            "MYSQL_HOST": "192.168.3.237",
+            "MYSQL_PORT": "3306",
+            "MYSQL_DB": "",
+            "MYSQL_USER": "test",
+            "NACOS_ADDR": "192.168.3.25:8848",
+            "NACOS_USERNAME": "app",
+            "NACOS_NAMESPACE": "37a532ac-5f5e-456b-b47a-db0fd1d2e954",
+            "XXL_JOB_ADMIN_ADDRESS": "http://xxl-job.sit-ys-broker.com/xxl-job-admin",
+            "XXL_JOB_USERNAME": "admin",
+            "ROCKETMQ_MCP_URL": "http://127.0.0.1:6868/sse",
+            "ROCKETMQ_NS_ADDR": "192.168.3.25:9876",
+            "MYSQL_PASS": "3L547Pi7KSZ93ynm",
+            "REDIS_URL": "redis://:NKCMoPyC>CRzfn2oQ2qL@192.168.3.25:6379/2",
+            "NACOS_PASSWORD": "vxRNo0i16TRoMdeAOZR5i",
+            "XXL_JOB_PASSWORD": "JH22jHZP$SH43@",
+            "XXL_JOB_ACCESS_TOKEN": "xxl#ZfnjjsSit@2024;eDKJ=11238473288jkKLDLKJ"
+          },
+          "notes": "elasticsearch-mcp 暂不用；ROCKETMQ_AK/SK 可选"
+        },
+        "pre": {
+          "label": "预发环境",
+          "servers": [
+            "loki-mcp",
+            "mysql-mcp",
+            "redis-mcp",
+            "xxl-job-mcp",
+            "rocketmq-mcp"
+          ],
+          "env": {
+            "LOKI_URL": "http://192.168.6.42:30100",
+            "MYSQL_HOST": "192.168.6.173",
+            "MYSQL_PORT": "3306",
+            "MYSQL_DB": "",
+            "MYSQL_USER": "test",
+            "XXL_JOB_ADMIN_ADDRESS": "http://192.168.6.119:8080/xxl-job-admin",
+            "XXL_JOB_USERNAME": "admin",
+            "ROCKETMQ_MCP_URL": "http://127.0.0.1:6868/sse",
+            "ROCKETMQ_NS_ADDR": "192.168.6.229:8100;192.168.6.35:8100",
+            "MYSQL_PASS": "cht9pqyNsgcsEnIF",
+            "REDIS_URL": "redis://:hjHGuy9(klHG123@redis-72468cfa-401f-4c35-8ab6-a89de6f88b0e.cn-south-1.dcs.myhuaweicloud.com:6379/0",
+            "XXL_JOB_PASSWORD": "JHjHZP$SHIjzj123",
+            "XXL_JOB_ACCESS_TOKEN": "xxl#ZfnjjsPre@2024;eDKJ=11238473288jkKLDLKJ"
+          },
+          "notes": "经纪商 pre；nacos 未配置"
+        }
+      }
+    },
+    "cloud": {
+      "label": "云商",
+      "path": "D:/project/yunshang-project",
+      "profiles": {
+        "dev": {
+          "label": "本地开发",
+          "servers": [
+            "loki-mcp",
+            "mysql-mcp",
+            "redis-mcp",
+            "xxl-job-mcp",
+            "nacos-mcp-router"
+          ],
+          "env": {
+            "LOKI_URL": "http://192.168.0.212:3100",
+            "MYSQL_HOST": "192.168.0.115",
+            "MYSQL_PORT": "3306",
+            "MYSQL_DB": "",
+            "MYSQL_USER": "developer",
+            "NACOS_ADDR": "192.168.0.212:8848",
+            "NACOS_USERNAME": "nacos",
+            "NACOS_NAMESPACE": "4194d3de-5573-4644-9d31-25efb72cae1a",
+            "XXL_JOB_ADMIN_ADDRESS": "http://192.168.0.212:48800/xxl-job-admin",
+            "XXL_JOB_USERNAME": "admin",
+            "MYSQL_PASS": "fXEbwFPh3NJqXg30womX",
+            "REDIS_URL": "redis://:^49ZUM5Jj3kYNQSKn@192.168.0.212:6379/1",
+            "NACOS_PASSWORD": "t1jaCAT9qQjr9Wytg24P",
+            "XXL_JOB_PASSWORD": "Q=A&#@bDnKeDTCBN#",
+            "XXL_JOB_ACCESS_TOKEN": "xxl#ZfnjjsSit@2024;eDKJ=11238473288jkKLDLKJ"
+          },
+          "notes": "云商 dev；elasticsearch-mcp、rocketmq-mcp 暂不用"
+        },
+        "sit": {
+          "label": "SIT 环境",
+          "servers": [
+            "loki-mcp",
+            "mysql-mcp",
+            "redis-mcp",
+            "xxl-job-mcp",
+            "nacos-mcp-router"
+          ],
+          "env": {
+            "LOKI_URL": "http://192.168.0.212:3100",
+            "MYSQL_HOST": "192.168.0.208",
+            "MYSQL_PORT": "3306",
+            "MYSQL_DB": "",
+            "MYSQL_USER": "developer",
+            "NACOS_ADDR": "192.168.0.212:8848",
+            "NACOS_USERNAME": "nacos",
+            "NACOS_NAMESPACE": "458877cd-6903-40e4-8cfa-df9906b6c7fe",
+            "XXL_JOB_ADMIN_ADDRESS": "http://192.168.0.209:58800/xxl-job-admin",
+            "XXL_JOB_USERNAME": "admin",
+            "MYSQL_PASS": "wWVajcYhdYviRTRMLCzP",
+            "REDIS_URL": "redis://:^49ZUM5Jj3kYNQSKn@192.168.0.212:6379/2",
+            "NACOS_PASSWORD": "t1jaCAT9qQjr9Wytg24P",
+            "XXL_JOB_PASSWORD": "Q=A&#@bDnKeDTCBN#",
+            "XXL_JOB_ACCESS_TOKEN": "xxl#ZfnjjsSit@2024;eDKJ=11238473288jkKLDLKJ"
+          },
+          "notes": "云商 sit；elasticsearch-mcp、rocketmq-mcp 暂不用"
+        },
+        "pre": {
+          "label": "预发环境",
+          "servers": [
+            "loki-mcp",
+            "mysql-mcp",
+            "xxl-job-mcp"
+          ],
+          "env": {
+            "LOKI_URL": "http://124.71.81.92:3100",
+            "MYSQL_HOST": "124.71.114.212",
+            "MYSQL_PORT": "43311",
+            "MYSQL_DB": "",
+            "MYSQL_USER": "test",
+            "XXL_JOB_ADMIN_ADDRESS": "http://124.71.81.92:8080/xxl-job-admin",
+            "XXL_JOB_USERNAME": "admin",
+            "MYSQL_PASS": "ouAg9Tbd2+QiLxsr",
+            "XXL_JOB_PASSWORD": "jduXDUUOafnGGgJpGa",
+            "XXL_JOB_ACCESS_TOKEN": "xxl#yunshangPre@2023;eDKJ=e7938473288jkKLDLKJ"
+          },
+          "notes": "云商 pre；redis-mcp、rocketmq-mcp 暂禁用（当前网络不可达）；nacos 未配置"
+        }
+      }
+    },
+    "b2c": {
+      "label": "B2C",
+      "path": "D:/project/BToC",
+      "profiles": {
+        "dev": {
+          "label": "B2C Mall DEV",
+          "servers": [
+            "loki-mcp",
+            "mysql-mcp",
+            "redis-mcp",
+            "xxl-job-mcp",
+            "nacos-mcp-router",
+            "rocketmq-mcp"
+          ],
+          "env": {
+            "LOKI_URL": "http://192.168.3.25:3100",
+            "MYSQL_HOST": "192.168.3.141",
+            "MYSQL_PORT": "3306",
+            "MYSQL_DB": "",
+            "MYSQL_USER": "developer",
+            "NACOS_ADDR": "192.168.3.141:8848",
+            "NACOS_USERNAME": "nacos",
+            "NACOS_NAMESPACE": "59cebfb8-4124-46f7-adf9-c35f310dfd21",
+            "XXL_JOB_ADMIN_ADDRESS": "http://192.168.3.141:18080/xxl-job-admin",
+            "XXL_JOB_USERNAME": "admin",
+            "ROCKETMQ_MCP_URL": "http://127.0.0.1:6869/sse",
+            "ROCKETMQ_NS_ADDR": "192.168.3.141:9876",
+            "MYSQL_PASS": "dasoh@zjzja123",
+            "REDIS_URL": "redis://:djoaS2123sfz@192.168.3.141:6379/1",
+            "NACOS_PASSWORD": "b2cmall-dev",
+            "XXL_JOB_PASSWORD": "JHdjoanz@a1123",
+            "XXL_JOB_ACCESS_TOKEN": "xxl#ZfnB2C-DEV@2024;eDKJ=11238473288jkKLDLKJ"
+          },
+          "notes": "B2C Mall dev; namespace b2cmall-dev; rocketmq jar at D:\\mcp\\deploy"
+        },
+        "sit": {
+          "label": "B2C Mall SIT",
+          "servers": [
+            "loki-mcp",
+            "mysql-mcp",
+            "redis-mcp",
+            "xxl-job-mcp",
+            "nacos-mcp-router",
+            "rocketmq-mcp"
+          ],
+          "env": {
+            "LOKI_URL": "http://192.168.3.25:3100",
+            "MYSQL_HOST": "192.168.3.42",
+            "MYSQL_PORT": "3306",
+            "MYSQL_DB": "",
+            "MYSQL_USER": "developer",
+            "NACOS_ADDR": "192.168.3.141:8848",
+            "NACOS_USERNAME": "nacos",
+            "NACOS_NAMESPACE": "1a2ed58f-ba31-43d0-9281-db56219750bc",
+            "XXL_JOB_ADMIN_ADDRESS": "http://192.168.3.42:18080/xxl-job-admin",
+            "XXL_JOB_USERNAME": "admin",
+            "ROCKETMQ_MCP_URL": "http://127.0.0.1:6869/sse",
+            "ROCKETMQ_NS_ADDR": "192.168.3.42:9876",
+            "ES_URL": "http://192.168.3.42:9200",
+            "MYSQL_PASS": "oxo@jdoDD121DL",
+            "REDIS_URL": "redis://:djo123s12@192.168.3.42:6379/2",
+            "NACOS_PASSWORD": "b2cmall-dev",
+            "XXL_JOB_PASSWORD": "1dsadzfv123d",
+            "XXL_JOB_ACCESS_TOKEN": "xxl#ZfnB2C-SIT@2024;eDKJ=11238473288jkKLDLKJ"
+          },
+          "notes": "B2C Mall sit; namespace b2cmall-sit; ES 仅作地址记录（默认未启用 elasticsearch-mcp）"
+        },
+        "pre": {
+          "label": "B2C Mall PRE",
+          "servers": [
+            "loki-mcp",
+            "mysql-mcp",
+            "redis-mcp",
+            "xxl-job-mcp"
+          ],
+          "env": {
+            "LOKI_URL": "http://192.168.6.42:30100",
+            "MYSQL_HOST": "192.168.6.68",
+            "MYSQL_PORT": "3306",
+            "MYSQL_DB": "",
+            "MYSQL_USER": "test",
+            "XXL_JOB_ADMIN_ADDRESS": "http://192.168.6.91:18080/xxl-job-admin",
+            "XXL_JOB_USERNAME": "admin",
+            "MYSQL_PASS": "Szfoxn@djo123",
+            "REDIS_URL": "redis://:dsvfFDz123@redis-a83c484b-5ef6-483b-9ea3-8288fcb7670f.cn-south-1.dcs.myhuaweicloud.com:6379/0",
+            "XXL_JOB_PASSWORD": "gzkhfzDzss23d",
+            "XXL_JOB_ACCESS_TOKEN": "xxl#ZfnB2C-PRE@2024;eDKJ=11238473288jkKLDLKJ"
+          },
+          "notes": "B2C Mall pre；nacos/rocketmq 未配置；Loki 沿用经纪商 pre"
+        }
+      }
+    }
+  }
+}
