@@ -25,7 +25,7 @@ description: >-
 | `scripts/show-project-mcp.ps1` | ✅ | 查看当前项目 MCP 映射 |
 | `~/.cursor/mcp.json` | — | Cursor **生效**配置（脚本生成，勿手改） |
 
-> 存在 `mcp.workspace.json` 时**优先使用**；否则回退到「每项目 `mcp.config.json` + `mcp.projects.json`」。
+> 所有脚本统一读取 `~/.cursor/mcp.workspace.json`；旧版 per-project `mcp.config.json` 仅用于 `--migrate-to-workspace` 迁移。
 
 ## 单文件配置（推荐）
 

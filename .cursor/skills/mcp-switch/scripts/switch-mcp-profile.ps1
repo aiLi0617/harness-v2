@@ -14,6 +14,11 @@ $ErrorActionPreference = "Stop"
 $SkillRoot = Split-Path -Parent $PSScriptRoot
 $ProjectRoot = (Get-Item (Join-Path $SkillRoot "..\..\..\..")).FullName
 $Configurator = Join-Path $PSScriptRoot "mcp-configurator.py"
+$workspacePath = Join-Path $env:USERPROFILE ".cursor\mcp.workspace.json"
+
+if (-not (Test-Path $workspacePath)) {
+    throw "Missing $workspacePath. Copy mcp-switch/mcp.workspace.example.json to ~/.cursor/mcp.workspace.json and edit."
+}
 
 $python = Get-Command python -ErrorAction SilentlyContinue
 if (-not $python) { $python = Get-Command python3 -ErrorAction SilentlyContinue }
@@ -24,7 +29,8 @@ $argsList = @(
     "--project-root", $ProjectRoot,
     "--skill-root", $SkillRoot,
     "--target", $Target,
-    "--apply-profile", $Profile
+    "--apply-profile", $Profile,
+    "--workspace-config", $workspacePath
 )
 if ($DryRun) { $argsList += "--dry-run" }
 
@@ -32,7 +38,7 @@ if ($DryRun) { $argsList += "--dry-run" }
 if ($LASTEXITCODE -eq 0 -and -not $DryRun) {
     $RocketMqRestart = Join-Path $PSScriptRoot "restart-rocketmq-mcp.ps1"
     if (Test-Path $RocketMqRestart) {
-        & $RocketMqRestart -Profile $Profile -ProjectRoot $ProjectRoot
+        & $RocketMqRestart -Profile $Profile -ProjectRoot $ProjectRoot -WorkspaceConfig $workspacePath
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
     Write-Host ""

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Merge mcp-registry + mcp.config.json into Cursor mcp.json."""
+"""Merge mcp-registry + mcp.workspace.json into Cursor mcp.json."""
 from __future__ import annotations
 
 import argparse
@@ -288,22 +288,50 @@ def registry_defaults(registry: dict[str, Any]) -> dict[str, str]:
     return defaults
 
 
-def load_mcp_config(project_root: Path) -> dict[str, Any]:
+def workspace_missing_message(workspace_path: Path) -> str:
+    return (
+        f"Missing {workspace_path}. "
+        "Copy .cursor/skills/shared/mcp-switch/mcp.workspace.example.json "
+        "to ~/.cursor/mcp.workspace.json and edit."
+    )
+
+
+def load_legacy_per_project_config(project_root: Path) -> dict[str, Any]:
+    """Load per-project mcp.config.json (migration / legacy fallback only)."""
     path = mcp_config_path(project_root)
     if path.is_file():
         return load_json(path)
 
     legacy_profiles = project_root / ".cursor" / "mcp.profiles.json"
     if not legacy_profiles.is_file():
-        raise FileNotFoundError(
-            f"Missing {path}. Copy .cursor/mcp.config.example.json to .cursor/mcp.config.json and edit."
-        )
+        raise FileNotFoundError(f"Missing legacy config at {path}")
 
-    migrated = migrate_legacy_config(project_root)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(migrated, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    print(f"Migrated legacy config -> {path}")
-    return migrated
+    return migrate_legacy_config(project_root)
+
+
+def load_project_config(
+    project_root: Path,
+    workspace_path: Path | None = None,
+) -> tuple[dict[str, Any], Path, str]:
+    ws_path = workspace_path or workspace_config_path()
+    if not ws_path.is_file():
+        raise FileNotFoundError(workspace_missing_message(ws_path))
+
+    workspace = load_json(ws_path)
+    project_id = find_project_id_by_root(workspace, project_root)
+    if not project_id:
+        raise FileNotFoundError(
+            f"Project root not found in workspace: {project_root}\nWorkspace: {ws_path}"
+        )
+    return project_config_from_workspace(workspace, project_id), ws_path, project_id
+
+
+def load_mcp_config(
+    project_root: Path,
+    workspace_path: Path | None = None,
+) -> dict[str, Any]:
+    config, _, _ = load_project_config(project_root, workspace_path)
+    return config
 
 
 def migrate_legacy_config(project_root: Path) -> dict[str, Any]:
@@ -374,9 +402,29 @@ def migrate_legacy_config(project_root: Path) -> dict[str, Any]:
     }
 
 
-def save_active_profile(project_root: Path, config: dict[str, Any], profile: str) -> None:
+def save_active_profile(
+    project_root: Path,
+    config: dict[str, Any],
+    profile: str,
+    workspace_path: Path | None = None,
+) -> None:
+    ws_path = workspace_path or workspace_config_path()
+    if not ws_path.is_file():
+        raise FileNotFoundError(workspace_missing_message(ws_path))
+    workspace = load_json(ws_path)
+    workspace["activeProfile"] = profile
+    save_workspace_config(workspace, ws_path)
+
+
+def save_legacy_per_project_active_profile(
+    project_root: Path,
+    config: dict[str, Any],
+    profile: str,
+) -> None:
     config["activeProfile"] = profile
     path = mcp_config_path(project_root)
+    if not path.is_file():
+        return
     path.write_text(json.dumps(config, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
@@ -574,7 +622,7 @@ def print_endpoint_summary(
         if not endpoint:
             url = cfg.get("url") if isinstance(cfg, dict) else None
             if isinstance(url, str) and url.startswith("{{"):
-                print(f"  {sid}: [!] 未解析占位符 {url} — 请检查 mcp.config.json")
+                print(f"  {sid}: [!] 未解析占位符 {url} — 请检查 mcp.workspace.json")
             else:
                 print(f"  {sid}: (无地址字段)")
             continue
@@ -610,10 +658,11 @@ def apply_mcp_profile(
     target: str,
     profile: str,
     dry_run: bool,
+    workspace_config: Path | None = None,
 ) -> int:
     registry_path = skill_root / "mcp-registry.json"
 
-    config = load_mcp_config(project_root)
+    config, ws_path, project_id = load_project_config(project_root, workspace_config)
     registry = load_json(registry_path)
     known = set((config.get("profiles") or {}).keys())
     if profile not in known:
@@ -664,10 +713,10 @@ def apply_mcp_profile(
         encoding="utf-8",
     )
 
-    save_active_profile(project_root, config, profile)
+    save_active_profile(project_root, config, profile, workspace_config=ws_path)
 
     print(f"Written: {out_path} ({len(final_servers)} servers)")
-    print(f"Config: {mcp_config_path(project_root)} (activeProfile={profile})")
+    print(f"Config: {ws_path} (project={project_id}, activeProfile={profile})")
     return 0
 
 
@@ -677,18 +726,26 @@ def build_unified_config(
     target: str,
     dry_run: bool,
     force: bool,
+    workspace_config: Path | None = None,
 ) -> int:
-    config = load_mcp_config(project_root)
+    config = load_mcp_config(project_root, workspace_config)
     profiles = config.get("profiles") or {}
     if not profiles:
-        print("No profiles in mcp.config.json", file=sys.stderr)
+        print("No profiles in mcp.workspace.json", file=sys.stderr)
         return 1
 
     default_profile = resolve_profile(config, None)
     total = sum(len(doc.get("servers") or []) for doc in profiles.values())
     print(f"Profiles: {len(profiles)} ({total} server slots total)")
 
-    return apply_mcp_profile(project_root, skill_root, target, default_profile, dry_run=dry_run)
+    return apply_mcp_profile(
+        project_root,
+        skill_root,
+        target,
+        default_profile,
+        dry_run=dry_run,
+        workspace_config=workspace_config,
+    )
 
 
 def build_config(
@@ -699,10 +756,11 @@ def build_config(
     servers: list[str] | None,
     dry_run: bool,
     force: bool,
+    workspace_config: Path | None = None,
 ) -> int:
     registry_path = skill_root / "mcp-registry.json"
 
-    config = load_mcp_config(project_root)
+    config, ws_path, project_id = load_project_config(project_root, workspace_config)
     registry = load_json(registry_path)
     active_profile = resolve_profile(config, profile)
 
@@ -759,7 +817,7 @@ def build_config(
     print(f"Profile: {active_profile} ({profile_doc.get('label', active_profile)})")
     if profile_doc.get("notes"):
         print(f"Note: {profile_doc['notes']}")
-    print(f"Config: {mcp_config_path(project_root)}")
+    print(f"Config: {ws_path} (project={project_id})")
 
     if dry_run:
         print(f"\n--- Dry run output ({out_path}) ---")
@@ -773,7 +831,7 @@ def build_config(
         print(f"Backup: {backup}")
 
     out_path.write_text(text, encoding="utf-8")
-    save_active_profile(project_root, config, active_profile)
+    save_active_profile(project_root, config, active_profile, workspace_config=ws_path)
 
     print(f"Written: {out_path}")
     print(f"Enabled: {', '.join(selected_servers)}")
@@ -849,7 +907,7 @@ def migrate_to_workspace(
             print(f"Skip missing directory: {project_root}", file=sys.stderr)
             continue
         try:
-            config = load_mcp_config(project_root)
+            config = load_legacy_per_project_config(project_root)
         except FileNotFoundError as exc:
             print(f"Skip {project_root}: {exc}", file=sys.stderr)
             continue
@@ -1053,7 +1111,7 @@ def apply_all_projects_profile(
             continue
 
         try:
-            config = load_mcp_config(project_root)
+            config = load_legacy_per_project_config(project_root)
         except FileNotFoundError as exc:
             print(f"Skip {project_root}: {exc}", file=sys.stderr)
             continue
@@ -1084,7 +1142,7 @@ def apply_all_projects_profile(
                 all_active[key] = cfg
 
         if not dry_run:
-            save_active_profile(project_root, config, profile)
+            save_legacy_per_project_active_profile(project_root, config, profile)
 
         project_roots.append(project_root)
         print(f"=== {project_label} ({project_id}) ===")
@@ -1134,7 +1192,7 @@ def apply_all_projects_profile(
     print("")
     print("--- 当前项目如何找 MCP ---")
     print("  1. 打开目标项目工作区")
-    print("  2. 读 .cursor/mcp.config.json 的 projectId")
+    print("  2. 读 ~/.cursor/mcp.workspace.json 中对应 projectId")
     print("  3. 分环境工具名 = {projectId}-<服务>，如 broker-mysql-mcp")
     print("  4. 共享工具：ONES、codegraph（无前缀）")
     print("  5. 运行 show-project-mcp.ps1 查看完整映射")
@@ -1145,24 +1203,9 @@ def show_project_mcp(
     project_root: Path,
     workspace_config: Path | None = None,
 ) -> int:
-    ws_path = workspace_config or workspace_config_path()
-    config_source = str(mcp_config_path(project_root))
-    if ws_path.is_file():
-        workspace = load_json(ws_path)
-        project_id = find_project_id_by_root(workspace, project_root)
-        if not project_id:
-            print(
-                f"Project root not found in workspace: {project_root}\n"
-                f"Workspace: {ws_path}",
-                file=sys.stderr,
-            )
-            return 1
-        config = project_config_from_workspace(workspace, project_id)
-        config_source = f"{ws_path} (project={project_id})"
-    else:
-        config = load_mcp_config(project_root)
+    config, ws_path, project_id = load_project_config(project_root, workspace_config)
+    config_source = f"{ws_path} (project={project_id})"
 
-    project_id = resolve_project_id(config, project_root)
     project_label = str(config.get("projectLabel") or project_id)
     profile = resolve_profile(config, None)
     profile_doc = (config.get("profiles") or {}).get(profile, {})
@@ -1200,14 +1243,17 @@ def show_project_mcp(
     return 0
 
 
-def list_profiles(project_root: Path) -> int:
-    config = load_mcp_config(project_root)
+def list_profiles(
+    project_root: Path,
+    workspace_config: Path | None = None,
+) -> int:
+    config, ws_path, project_id = load_project_config(project_root, workspace_config)
     active = config.get("activeProfile", "")
     default = config.get("defaultProfile", "dev")
     print(f"defaultProfile: {default}")
     if active:
         print(f"activeProfile: {active}")
-    print(f"config: {mcp_config_path(project_root)}")
+    print(f"config: {ws_path} (project={project_id})")
     print("")
     for name, doc in sorted((config.get("profiles") or {}).items()):
         marker = " *" if name == active else ""
@@ -1272,7 +1318,7 @@ def main() -> int:
         return show_project_mcp(project_root, workspace_config=workspace_config)
 
     if args.list_profiles:
-        return list_profiles(project_root)
+        return list_profiles(project_root, workspace_config=workspace_config)
 
     if args.apply_profile_all:
         return apply_all_projects_profile(
@@ -1291,6 +1337,7 @@ def main() -> int:
             target=args.target,
             profile=args.apply_profile.strip().lower(),
             dry_run=args.dry_run,
+            workspace_config=workspace_config,
         )
 
     if args.mode == "unified":
@@ -1300,6 +1347,7 @@ def main() -> int:
             target=args.target,
             dry_run=args.dry_run,
             force=args.force,
+            workspace_config=workspace_config,
         )
 
     servers = [s.strip() for s in args.servers.split(",") if s.strip()] if args.servers else None
@@ -1311,6 +1359,7 @@ def main() -> int:
         servers=servers,
         dry_run=args.dry_run,
         force=args.force,
+        workspace_config=workspace_config,
     )
 
 

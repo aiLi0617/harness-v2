@@ -4,6 +4,8 @@ param(
     [string]$Profile,
 
     [string]$ProjectRoot = "",
+    [string]$ProjectId = "",
+    [string]$WorkspaceConfig = "",
     [switch]$StopOnly
 )
 
@@ -13,12 +15,11 @@ if (-not $ProjectRoot) {
     $ProjectRoot = (Get-Item (Join-Path $SkillRoot "..\..\..\..")).FullName
 }
 
-$ConfigPath = Join-Path $ProjectRoot ".cursor\mcp.config.json"
+$workspacePath = if ($WorkspaceConfig) { $WorkspaceConfig } else { Join-Path $env:USERPROFILE ".cursor\mcp.workspace.json" }
 $RestartScript = "D:\mcp\restart-rocketmq-mcp.ps1"
 
-if (-not (Test-Path $ConfigPath)) {
-    Write-Warning "mcp.config.json not found: $ConfigPath"
-    exit 0
+if (-not (Test-Path $workspacePath)) {
+    Write-Error "mcp.workspace.json not found: $workspacePath"
 }
 
 if (-not (Test-Path $RestartScript)) {
@@ -26,10 +27,33 @@ if (-not (Test-Path $RestartScript)) {
     exit 0
 }
 
-$config = Get-Content $ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
-$profileDoc = $config.profiles.$Profile
+$ws = Get-Content $workspacePath -Raw -Encoding UTF8 | ConvertFrom-Json
+$projectEntry = $null
+$resolvedProjectId = $ProjectId
+
+if ($resolvedProjectId -and $ws.projects.$resolvedProjectId) {
+    $projectEntry = $ws.projects.$resolvedProjectId
+} else {
+    $normalizedRoot = (Resolve-Path $ProjectRoot).Path -replace '\\', '/'
+    foreach ($prop in $ws.projects.PSObject.Properties) {
+        $entryPath = [string]$prop.Value.path
+        if (-not $entryPath) { continue }
+        $normalizedEntry = $entryPath -replace '\\', '/'
+        if ($normalizedEntry -ieq $normalizedRoot) {
+            $projectEntry = $prop.Value
+            $resolvedProjectId = $prop.Name
+            break
+        }
+    }
+}
+
+if (-not $projectEntry) {
+    Write-Error "Project not found in workspace: root=$ProjectRoot id=$ProjectId workspace=$workspacePath"
+}
+
+$profileDoc = $projectEntry.profiles.$Profile
 if (-not $profileDoc) {
-    Write-Error "Unknown profile in mcp.config.json: $Profile"
+    Write-Error "Unknown profile '$Profile' for project '$resolvedProjectId' in mcp.workspace.json"
 }
 
 $servers = @($profileDoc.servers)
@@ -54,7 +78,7 @@ $ak = $envMap["ROCKETMQ_AK"]
 $sk = $envMap["ROCKETMQ_SK"]
 
 if (-not $StopOnly -and [string]::IsNullOrWhiteSpace($ns)) {
-    Write-Error "Profile '$Profile' missing ROCKETMQ_NS_ADDR for rocketmq-mcp"
+    Write-Error "Profile '$Profile' missing ROCKETMQ_NS_ADDR for rocketmq-mcp (project=$resolvedProjectId)"
 }
 
 $restartArgs = @{
@@ -67,6 +91,6 @@ if (-not [string]::IsNullOrWhiteSpace($sk)) { $restartArgs["Sk"] = $sk }
 if ($StopOnly) { $restartArgs["StopOnly"] = $true }
 
 Write-Host ""
-Write-Host "--- rocketmq-mcp restart [$Profile] ---"
+Write-Host "--- rocketmq-mcp restart [$resolvedProjectId / $Profile] ---"
 & $RestartScript @restartArgs
 Write-Host "---"
