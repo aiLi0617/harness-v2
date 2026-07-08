@@ -30,6 +30,11 @@ if ($DryRun) { $argsList += "--dry-run" }
 
 & $python.Source @argsList
 if ($LASTEXITCODE -eq 0 -and -not $DryRun) {
+    $RocketMqRestart = Join-Path $PSScriptRoot "restart-rocketmq-mcp.ps1"
+    if (Test-Path $RocketMqRestart) {
+        & $RocketMqRestart -Profile $Profile -ProjectRoot $ProjectRoot
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    }
     Write-Host ""
     Write-Host "========================================"
     Write-Host "  请 Reload Window 使配置生效："

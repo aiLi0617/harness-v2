@@ -15,7 +15,7 @@
       "postInstall": ["codegraph init"],
       "config": {
         "type": "stdio",
-        "command": "codegraph",
+        "command": "{{CODEGRAPH_BIN}}",
         "args": ["serve", "--mcp", "--path", "${workspaceFolder}"]
       }
     },
@@ -230,7 +230,7 @@
       "transport": "http",
       "prerequisites": ["Java 17+", "需独立部署 rocketmq-mcp jar（SSE 6868）"],
       "install": {
-        "all": "git clone https://github.com/francisoliverlee/rocketmq-mcp && cd rocketmq-mcp && ./build.sh && java -jar target/rocketmq-mcp-*.jar"
+        "all": "git clone 到 D:\\mcp\\rocketmq-mcp && D:\\mcp\\rocketmq-mcp\\build.ps1（固定 Java 17；jar → D:\\mcp\\deploy\\rocketmq-mcp-server.jar）"
       },
       "config": {
         "url": "{{ROCKETMQ_MCP_URL}}"
@@ -238,8 +238,8 @@
       "envDefaults": {
         "ROCKETMQ_MCP_URL": "http://127.0.0.1:6868/sse"
       },
-      "envKeys": ["ROCKETMQ_MCP_URL"],
-      "notes": "【默认未启用】Spring AI MCP SSE；jar 部署后配置 ROCKETMQ_MCP_URL，加入 profiles.*.servers 后 switch"
+      "envKeys": ["ROCKETMQ_MCP_URL", "ROCKETMQ_NS_ADDR", "ROCKETMQ_AK", "ROCKETMQ_SK"],
+      "notes": "【jar 独立进程】ROCKETMQ_NS_ADDR 必填；AK/SK 可选；switch 自动 restart。无 ACL 须 patch AdminUtil（见 reference.md）。114 工具；Cursor 可能 STATUS.md timeout。"
     }
   }
 }

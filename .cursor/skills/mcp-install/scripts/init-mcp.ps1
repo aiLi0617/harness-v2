@@ -6,7 +6,7 @@
 .EXAMPLE
   .\init-mcp.ps1 -ListProfiles
   .\init-mcp.ps1 -Profile dev
-  # 日常切换环境请用 switch-mcp-profile.ps1 sit
+  # 日常切换环境请用 mcp-switch skill：switch-mcp-profile.ps1 sit
 #>
 param(
     [ValidateSet("user", "project")]

@@ -1,4 +1,4 @@
-# MCP Init — 详细参考
+# MCP Install — 详细参考
 
 ## 架构
 
@@ -7,7 +7,7 @@ mcp-registry.json          服务模板（install、启动 args/env）
         +
 .cursor/mcp.config.json    地址、密钥、activeProfile、tools 绝对路径
         ↓
-switch-mcp-profile.ps1 / mcp-configurator.py
+switch-mcp-profile.ps1 / mcp-configurator.py（位于 mcp-switch/scripts/）
         ↓
 ~/.cursor/mcp.json         Cursor 生效（勿手改）
         ↓
@@ -35,7 +35,7 @@ switch-mcp-profile.ps1 / mcp-configurator.py
 
 1. `mcp.config.json` → `profiles.uat`
 2. 同步 `mcp.config.example.json`（占位符）
-3. `switch-mcp-profile.ps1 uat`
+3. `mcp-switch/scripts/switch-mcp-profile.ps1 uat`
 
 ## 服务对照
 
@@ -47,6 +47,7 @@ switch-mcp-profile.ps1 / mcp-configurator.py
 | redis-mcp | stdio | https://github.com/redis/mcp-redis | profile **`REDIS_URL`** | 47 |
 | xxl-job-mcp | stdio | https://github.com/zz-wenzb/xxl-job-mcp | profile `XXL_JOB_*` → 生成 yaml | 13 |
 | nacos-mcp-router | stdio | https://github.com/nacos-group/nacos-mcp-router | profile `NACOS_*` | 3 |
+| rocketmq-mcp | HTTP SSE | https://github.com/francisoliverlee/rocketmq-mcp | profile `ROCKETMQ_*` + 本地 jar | 114（jar 侧） |
 | ONES | HTTP | https://sz.ones.cn/mcp | fixedEnv | 68 |
 | feishu-cli | — | https://github.com/larksuite/cli | 非 MCP | — |
 
@@ -55,7 +56,8 @@ switch-mcp-profile.ps1 / mcp-configurator.py
 | ID | 传输 | 仓库 | 启用 |
 |----|------|------|------|
 | elasticsearch-mcp | stdio | https://github.com/elastic/mcp-server-elasticsearch | 加入 `servers` + `ES_URL` 等 |
-| rocketmq-mcp | HTTP SSE | https://github.com/francisoliverlee/rocketmq-mcp | 部署 jar + `ROCKETMQ_MCP_URL` |
+
+> dev/sit/pre 已默认启用 `rocketmq-mcp`；`elasticsearch-mcp` 仍默认关闭。
 
 ## 团队 dev / sit 差异
 
@@ -72,6 +74,9 @@ switch-mcp-profile.ps1 / mcp-configurator.py
 | 脚本 | 路径 | 作用 |
 |------|------|------|
 | `probe-mcp-dev.py` | `.cursor/.generated/probe-mcp-dev.py` | 后端 API + Cursor mcps 工具层统计 |
+| `probe-rocketmq-mcp.py` | `.cursor/.generated/probe-rocketmq-mcp.py` | jar / SSE / NameServer / Cursor 索引 |
+| `probe-rocketmq-mcp-handshake.py` | `.cursor/.generated/probe-rocketmq-mcp-handshake.py` | MCP 协议 tools/list（114 工具） |
+| `query-mq-via-mcp.py` | `.cursor/.generated/query-mq-via-mcp.py` | topic 积压 + `queryConsumeQueue` 样本 |
 | `verify-mcp-dev.py` | `.cursor/.generated/verify-mcp-dev.py` | 轻量后端连通（TCP/认证/HTTP） |
 
 ```powershell
@@ -84,6 +89,11 @@ D:\miniconda3\python.exe .cursor\.generated\probe-mcp-dev.py sit
 
 ```powershell
 D:\miniconda3\python.exe .cursor\.generated\verify-mcp-dev.py
+
+# rocketmq 专项
+D:\miniconda3\python.exe .cursor\.generated\probe-rocketmq-mcp.py
+D:\miniconda3\python.exe .cursor\.generated\probe-rocketmq-mcp-handshake.py
+D:\miniconda3\python.exe .cursor\.generated\query-mq-via-mcp.py [TOPIC ...]
 ```
 
 ### sit 探测预期（2026-06 验证通过）
@@ -105,6 +115,8 @@ D:\miniconda3\python.exe .cursor\.generated\verify-mcp-dev.py
 | Nacos naming API | namespace 内 service count > 0 |
 | XXL-Job login | `code=200` |
 | ONES endpoint | HTTP 401/405（可达） |
+| RocketMQ NS | `192.168.3.25:9876` TCP 可达 |
+| rocketmq jar | `:6868` 监听；handshake 114 工具 |
 | MCP 工具层 | loki/mysql/redis/xxl-job/nacos/ONES 均 Connected |
 
 ## XXL-JOB
@@ -185,15 +197,72 @@ profile.env 示例（dev db1）：
 | 密码含 `>` | 原文写入 URL | `%3E` 编码 → `invalid username-password pair` |
 | 密码含 `@` | URI 转义 `@` | 未转义导致 host 解析错误 |
 
-## RocketMQ MCP（可选，默认关闭）
+## RocketMQ MCP
 
-独立部署 Spring Boot jar（Java 17+，端口 6868，SSE `/sse`）：
+本地安装目录：**`D:\mcp/`**（与 Cursor 配置分离）
 
-```json
-"ROCKETMQ_MCP_URL": "http://192.168.3.25:6868/sse"
+### 两层架构
+
+| 层 | 位置 | 作用 |
+|----|------|------|
+| **jar 服务** | `D:\mcp\deploy\rocketmq-mcp-server.jar` | 独立 Java 进程，SSE `:6868` |
+| **Cursor 客户端** | `~/.cursor/mcp.json` → `"url": "http://127.0.0.1:6868/sse"` | 仅 HTTP SSE，无 command/uvx |
+
+### profile.env
+
+| 变量 | 必填 | 说明 |
+|------|------|------|
+| `ROCKETMQ_MCP_URL` | ✅ | 通常 `http://127.0.0.1:6868/sse` |
+| `ROCKETMQ_NS_ADDR` | ✅ | NameServer，如 `192.168.3.25:9876` |
+| `ROCKETMQ_AK` / `ROCKETMQ_SK` | ❌ | 仅 RocketMQ 开启 ACL 时需要 |
+
+switch 链路：`mcp-switch/scripts/switch-mcp-profile.ps1` → `restart-rocketmq-mcp.ps1` → `D:\mcp\restart-rocketmq-mcp.ps1`
+
+- stop 旧 jar（commandLine / 端口 6868）
+- `java -DNS_ADDR=... [-DAK=... -DSK=...] -jar ... --server.port=6868`
+- 轮询最多 30s 等待监听
+- 从 `servers` 移除 `rocketmq-mcp` 后 switch 仅 stop jar
+
+### 构建与部署
+
+```powershell
+# 需 Java 17+（build.ps1 固定 D:\jdk\jdk17）
+D:\mcp\rocketmq-mcp\build.ps1
 ```
 
-jar 内部连接 RocketMQ NameServer（如 `192.168.3.25:9876`），与 MCP URL 无关。**需 jar 先在线**。
+Maven 使用 `D:\mcp\settings-build.xml`。产物：`D:\mcp\deploy\rocketmq-mcp-server.jar`
+
+### 本地补丁（无 ACL 必做）
+
+上游 `AdminUtil.validateRequiredParameters` 强制 AK/SK；无 ACL 时 `queryRecentMessages` 等返回 `ak不能为空`。
+
+已在 `D:\mcp\rocketmq-mcp\src\...\AdminUtil.java` 改为仅校验 NameServer；改后须 **rebuild + restart**。
+
+### 消息查询
+
+| 场景 | 工具 / 脚本 | 说明 |
+|------|-------------|------|
+| topic 列表 | `fetchAllTopicList` | ~1000+ topic |
+| 队列积压 | `examineTopicStats` | Java 风格 JSON，regex 解析 offset |
+| 队列样本 | `queryConsumeQueue` | offset/size；body 常为 null |
+| 按 key/时间 | `queryRecentMessages` | 需 message key |
+| 按 msgId | `viewMessage` | 需 topic + msgId |
+
+```powershell
+D:\miniconda3\python.exe .cursor\.generated\query-mq-via-mcp.py
+D:\miniconda3\python.exe .cursor\.generated\query-mq-via-mcp.py ORDER_SERVER_TOPIC_DEV
+```
+
+dev topic 命名：`OPERATE_LOG_TOPIC_DEV`、`ORDER_SERVER_TOPIC_DEV` 等（见 `RocketMQConstants.java`）。
+
+### Cursor 索引
+
+- jar 协议正常（handshake 114 工具 ~0.1s）
+- `mcps/user-rocketmq-mcp/STATUS.md` 可能出现（114 工具 `tools/list` timeout）
+- **以 jar 探测为准**；Reload 后仍 Error → Disable → Enable
+- Cursor 请求协议 `2025-11-25`，jar 回退 `2024-11-05`
+
+手动重启：`D:\mcp\restart-rocketmq-mcp.ps1 -NsAddr 192.168.3.25:9876 -Profile dev`
 
 ## Elasticsearch（可选，默认关闭）
 
@@ -242,23 +311,27 @@ jar 内部连接 RocketMQ NameServer（如 `192.168.3.25:9876`），与 MCP URL 
 | xxl-job 认证失败 | 地址/账号 | 校正 `XXL_JOB_*`；检查生成的 yaml |
 | nacos router 空列表 | 路由型设计 | 用 naming API 验后端；按需 `add_mcp_server` |
 | nacos-mcp-router 连不上 | 密码/namespace | `NACOS_ADDR`、`NACOS_NAMESPACE` |
-| rocketmq-mcp 无工具 | jar 未启动 | 部署并启动 jar；确认 `/sse` 可达 |
+| rocketmq-mcp 无工具 / STATUS.md | jar 未启动或 Cursor timeout | 先 `probe-rocketmq-mcp-handshake.py`；jar OK 则 Reload / Disable→Enable |
+| rocketmq `ak不能为空` | 上游 AdminUtil 未 patch | 重建 `D:\mcp` 本地 jar（见 RocketMQ 小节） |
+| rocketmq build 失败 Java 17 | JAVA_HOME=11 | `build.ps1` 已固定 `D:\jdk\jdk17` |
+| rocketmq switch 报 6868 未监听 | 启动慢 | `restart-rocketmq-mcp.ps1` 已轮询 30s；查 `D:\mcp\logs\` |
 | codegraph 0 工具 | 未索引 | `codegraph init` |
 
 ## 验证清单
 
-1. `switch-mcp-profile.ps1 <profile>` — 输出地址与预期一致
+1. `mcp-switch/scripts/switch-mcp-profile.ps1 <profile>` — 输出地址与预期一致；含 rocketmq 时 jar 已 restart
 2. **Reload Window**
-3. Settings → MCP 全 Connected
-4. 运行 `probe-mcp-dev.py` — 后端 7/7 + MCP 工具层 OK
-5. 抽样调用：`who_am_i` / `SELECT 1` / `dbsize` / `loki_label_names` / `get_dashboard`
+3. Settings → MCP 全 Connected（rocketmq 以 jar 探测为准）
+4. 运行 `probe-mcp-dev.py` — 后端通过 + MCP 工具层 OK
+5. 含 rocketmq 时：`probe-rocketmq-mcp-handshake.py` + 可选 `query-mq-via-mcp.py`
+6. 抽样调用：`who_am_i` / `SELECT 1` / `dbsize` / `loki_label_names` / `get_dashboard`
 
 ## page-agent 共存
 
-合并写入 `~/.cursor/mcp.json`；非 registry 管理的条目保留。自定义 MCP 若用 `npx`，建议也改为绝对路径。page-agent 报错不影响 mcp-init 管理的 dev 服务。
+合并写入 `~/.cursor/mcp.json`；非 registry 管理的条目保留。自定义 MCP 若用 `npx`，建议也改为绝对路径。page-agent 报错不影响 mcp-install 管理的 dev 服务。
 
 ## 项目集成
 
-Onboarding：`SKILL.md` → copy 配置 → switch → Reload → `probe-mcp-dev.py` → 抽样工具调用。
+Onboarding：`mcp-install/SKILL.md` → copy 配置 → `mcp-switch` switch → Reload → `probe-mcp-dev.py` → 抽样工具调用。
 
 Agent 规则：`.cursor/rules/memory/mcp-environment.mdc`

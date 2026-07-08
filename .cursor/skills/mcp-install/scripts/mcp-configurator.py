@@ -100,6 +100,20 @@ def detect_loki_mcp_bin() -> str:
     return "loki-mcp-server"
 
 
+def detect_codegraph_bin() -> str:
+    for name in ("codegraph", "codegraph.cmd", "codegraph.exe"):
+        path = shutil.which(name)
+        if path:
+            return path
+    if sys.platform == "win32":
+        appdata = os.environ.get("APPDATA", "")
+        if appdata:
+            candidate = Path(appdata) / "npm" / "codegraph.cmd"
+            if candidate.is_file():
+                return str(candidate)
+    return "codegraph"
+
+
 def xxl_job_generated_config_path(project_root: Path, profile_name: str) -> Path:
     return project_root / ".cursor" / ".generated" / f"xxl-job-{profile_name}.yaml"
 
@@ -154,6 +168,8 @@ def augment_tool_paths(env_map: dict[str, str]) -> dict[str, str]:
         out["NPX_BIN"] = detect_npx_bin()
     if not out.get("LOKI_MCP_BIN"):
         out["LOKI_MCP_BIN"] = detect_loki_mcp_bin()
+    if not out.get("CODEGRAPH_BIN"):
+        out["CODEGRAPH_BIN"] = detect_codegraph_bin()
     return out
 
 
@@ -186,6 +202,40 @@ def resolve_value(value: Any, env_map: dict[str, str], registry_defaults: dict[s
 
 
 DEPRECATED_MANAGED_KEYS = frozenset({"feishu-mcp"})
+SHARED_MCP_IDS = frozenset({"ONES", "codegraph"})
+
+
+def projects_registry_path() -> Path:
+    return Path.home() / ".cursor" / "mcp.projects.json"
+
+
+def resolve_project_id(
+    config: dict[str, Any],
+    project_root: Path,
+    fallback_id: str | None = None,
+) -> str:
+    project_id = str(config.get("projectId") or "").strip()
+    if project_id:
+        return project_id
+    if fallback_id:
+        return str(fallback_id).strip()
+    return project_root.name
+
+
+def prefix_server_key(project_id: str, server_id: str) -> str:
+    if server_id in SHARED_MCP_IDS:
+        return server_id
+    return f"{project_id}-{server_id}"
+
+
+def base_server_id(server_key: str, registry_ids: set[str]) -> str:
+    if server_key in registry_ids or server_key in SHARED_MCP_IDS:
+        return server_key
+    for sid in sorted(registry_ids | SHARED_MCP_IDS, key=len, reverse=True):
+        suffix = f"-{sid}"
+        if server_key.endswith(suffix):
+            return sid
+    return server_key
 
 
 def registry_defaults(registry: dict[str, Any]) -> dict[str, str]:
@@ -226,7 +276,7 @@ def migrate_legacy_config(project_root: Path) -> dict[str, Any]:
 
     tools = {
         k: env_local[k]
-        for k in ("UVX_BIN", "NPX_BIN", "LOKI_MCP_BIN")
+        for k in ("UVX_BIN", "NPX_BIN", "LOKI_MCP_BIN", "CODEGRAPH_BIN")
         if env_local.get(k)
     }
 
@@ -391,21 +441,26 @@ def legacy_suffixed_keys(registry: dict[str, Any], profile_names: set[str]) -> s
     return keys
 
 
-def describe_server_endpoint(server_id: str, cfg: dict[str, Any]) -> str | None:
+def describe_server_endpoint(
+    server_id: str,
+    cfg: dict[str, Any],
+    registry_ids: set[str] | None = None,
+) -> str | None:
     if not isinstance(cfg, dict):
         return None
+    base_id = base_server_id(server_id, registry_ids or {server_id})
     url = cfg.get("url")
     if isinstance(url, str) and url and not url.startswith("{{"):
         return url
     env = cfg.get("env") or {}
-    if server_id == "mysql-mcp":
+    if base_id == "mysql-mcp":
         host = env.get("MYSQL_HOST")
         if not host:
             return None
         port = env.get("MYSQL_PORT", "3306")
         db = env.get("MYSQL_DB", "")
         return f"{host}:{port}/{db}" if db else f"{host}:{port}"
-    if server_id == "redis-mcp":
+    if base_id == "redis-mcp":
         args = cfg.get("args") or []
         for i, arg in enumerate(args):
             if arg == "--url" and i + 1 < len(args):
@@ -416,17 +471,17 @@ def describe_server_endpoint(server_id: str, cfg: dict[str, Any]) -> str | None:
         port = env.get("REDIS_PORT", "6379")
         db = env.get("REDIS_DB", "0")
         return f"{host}:{port} db={db}"
-    if server_id == "elasticsearch-mcp":
+    if base_id == "elasticsearch-mcp":
         return env.get("ES_URL") or env.get("ELASTICSEARCH_HOSTS")
-    if server_id == "loki-mcp":
+    if base_id == "loki-mcp":
         return env.get("LOKI_URL")
-    if server_id == "nacos-mcp-router":
+    if base_id == "nacos-mcp-router":
         addr = env.get("NACOS_ADDR")
         ns = env.get("NACOS_NAMESPACE")
         if not addr:
             return None
         return f"{addr} ns={ns}" if ns else addr
-    if server_id == "xxl-job-mcp":
+    if base_id == "xxl-job-mcp":
         env = cfg.get("env") or {}
         admin = env.get("XXL_JOB_ADMIN_ADDRESS")
         if admin:
@@ -441,9 +496,13 @@ def describe_server_endpoint(server_id: str, cfg: dict[str, Any]) -> str | None:
                         if stripped.startswith("admin_address:"):
                             return stripped.split(":", 1)[1].strip().strip('"')
         return None
-    if server_id == "rocketmq-mcp":
-        return cfg.get("url") if isinstance(cfg.get("url"), str) else env.get("ROCKETMQ_MCP_URL")
-    if server_id == "codegraph":
+    if base_id == "rocketmq-mcp":
+        url = cfg.get("url") if isinstance(cfg.get("url"), str) else env.get("ROCKETMQ_MCP_URL")
+        ns = env.get("ROCKETMQ_NS_ADDR")
+        if url and ns:
+            return f"{url} (NS={ns})"
+        return url
+    if base_id == "codegraph":
         return "stdio (local ${workspaceFolder})"
     return None
 
@@ -680,6 +739,199 @@ def build_config(
     return 0
 
 
+def load_projects_registry(registry_path: Path | None = None) -> dict[str, Any]:
+    path = registry_path or projects_registry_path()
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"Missing {path}. Copy .cursor/skills/shared/mcp-switch/mcp.projects.example.json to ~/.cursor/mcp.projects.json and edit."
+        )
+    return load_json(path)
+
+
+def all_prefixed_managed_keys(
+    projects_doc: dict[str, Any],
+    registry_ids: set[str],
+) -> set[str]:
+    keys: set[str] = set(SHARED_MCP_IDS) | DEPRECATED_MANAGED_KEYS
+    for entry in projects_doc.get("projects") or []:
+        project_id = str(entry.get("id") or "").strip()
+        if not project_id:
+            continue
+        for sid in registry_ids:
+            keys.add(prefix_server_key(project_id, sid))
+        for profile_name in ("dev", "sit", "pre", "uat"):
+            for sid in registry_ids:
+                keys.add(f"{sid}-{profile_name}")
+    return keys
+
+
+def apply_all_projects_profile(
+    skill_root: Path,
+    target: str,
+    profile: str,
+    dry_run: bool,
+    projects_registry: Path | None = None,
+) -> int:
+    if target != "user":
+        print("Multi-project switch only supports --target user", file=sys.stderr)
+        return 1
+
+    projects_doc = load_projects_registry(projects_registry)
+    entries = projects_doc.get("projects") or []
+    if not entries:
+        print("No projects in mcp.projects.json", file=sys.stderr)
+        return 1
+
+    registry_path = skill_root / "mcp-registry.json"
+    registry = load_json(registry_path)
+    registry_ids = set(registry.get("servers", {}).keys())
+
+    all_active: dict[str, Any] = {}
+    project_roots: list[Path] = []
+
+    print(f"Switch all projects -> profile: {profile}")
+    print(f"Registry: {projects_registry_path() if not projects_registry else projects_registry}")
+    print("")
+
+    for entry in entries:
+        raw_path = str(entry.get("path") or "").strip()
+        if not raw_path:
+            print(f"Skip entry without path: {entry}", file=sys.stderr)
+            continue
+        project_root = Path(raw_path).expanduser().resolve()
+        if not project_root.is_dir():
+            print(f"Skip missing directory: {project_root}", file=sys.stderr)
+            continue
+
+        try:
+            config = load_mcp_config(project_root)
+        except FileNotFoundError as exc:
+            print(f"Skip {project_root}: {exc}", file=sys.stderr)
+            continue
+
+        project_id = resolve_project_id(config, project_root, entry.get("id"))
+        known = set((config.get("profiles") or {}).keys())
+        if profile not in known:
+            print(
+                f"Skip {project_id}: profile '{profile}' not in {project_root}",
+                file=sys.stderr,
+            )
+            continue
+
+        pool = build_mcp_pool(config, registry, project_root)
+        active = compose_mcp_for_profile(pool, profile)
+        project_label = str(config.get("projectLabel") or entry.get("label") or project_id)
+        prof_label = config["profiles"][profile].get("label", profile)
+
+        prefixed: dict[str, Any] = {}
+        for sid, cfg in active.items():
+            key = prefix_server_key(project_id, sid)
+            if key in SHARED_MCP_IDS:
+                if key not in all_active:
+                    all_active[key] = cfg
+                prefixed[key] = cfg
+            else:
+                prefixed[key] = cfg
+                all_active[key] = cfg
+
+        if not dry_run:
+            save_active_profile(project_root, config, profile)
+
+        project_roots.append(project_root)
+        print(f"=== {project_label} ({project_id}) ===")
+        print(f"  path: {project_root}")
+        print(f"  activeProfile: {profile} ({prof_label})")
+        for key in sorted(prefixed):
+            endpoint = describe_server_endpoint(key, prefixed[key], registry_ids)
+            shared = " (共享)" if key in SHARED_MCP_IDS else ""
+            print(f"  {key}: {endpoint or '(无地址)'}{shared}")
+        print("")
+
+    if not all_active:
+        print("No MCP servers generated.", file=sys.stderr)
+        return 1
+
+    out_path = Path.home() / ".cursor" / "mcp.json"
+    existing = load_json(out_path) if out_path.is_file() else {}
+    existing_servers = existing.get("mcpServers") or {}
+    managed = all_prefixed_managed_keys(projects_doc, registry_ids) | registry_ids
+    custom = {
+        k: v
+        for k, v in existing_servers.items()
+        if k not in managed
+    }
+    final_servers = {**custom, **all_active}
+
+    removed = sorted(k for k in existing_servers if k in managed and k not in all_active)
+    if removed:
+        print("Removed stale:", ", ".join(removed))
+
+    if dry_run:
+        print("\n--- dry run ---")
+        print(json.dumps({"mcpServers": final_servers}, indent=2, ensure_ascii=False))
+        return 0
+
+    if out_path.is_file():
+        backup = out_path.with_suffix(f".json.bak.{datetime.now():%Y%m%d-%H%M%S}")
+        backup.write_text(out_path.read_text(encoding="utf-8"), encoding="utf-8")
+        print(f"Backup: {backup}")
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(
+        json.dumps({"mcpServers": final_servers}, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    print(f"Written: {out_path} ({len(final_servers)} servers)")
+    print("")
+    print("--- 当前项目如何找 MCP ---")
+    print("  1. 打开目标项目工作区")
+    print("  2. 读 .cursor/mcp.config.json 的 projectId")
+    print("  3. 分环境工具名 = {projectId}-<服务>，如 broker-mysql-mcp")
+    print("  4. 共享工具：ONES、codegraph（无前缀）")
+    print("  5. 运行 show-project-mcp.ps1 查看完整映射")
+    return 0
+
+
+def show_project_mcp(project_root: Path) -> int:
+    config = load_mcp_config(project_root)
+    project_id = resolve_project_id(config, project_root)
+    project_label = str(config.get("projectLabel") or project_id)
+    profile = resolve_profile(config, None)
+    profile_doc = (config.get("profiles") or {}).get(profile, {})
+    fixed_ids = resolve_fixed_servers(config)
+    profile_servers = profile_doc.get("servers") or []
+
+    mcp_json_path = Path.home() / ".cursor" / "mcp.json"
+    cursor_keys = set((load_json(mcp_json_path).get("mcpServers") or {}).keys()) if mcp_json_path.is_file() else set()
+    multi_mode = any(k.startswith(f"{project_id}-") for k in cursor_keys)
+
+    print(f"projectId: {project_id}")
+    print(f"projectLabel: {project_label}")
+    print(f"activeProfile: {profile} ({profile_doc.get('label', profile)})")
+    print(f"config: {mcp_config_path(project_root)}")
+    print(f"cursorMode: {'multi-project (带前缀)' if multi_mode else 'single-project (无前缀)'}")
+    print("")
+    print("Agent 应使用的 MCP 工具名：")
+
+    def tool_name(sid: str) -> str:
+        return prefix_server_key(project_id, sid) if multi_mode else sid
+
+    for sid in fixed_ids:
+        name = tool_name(sid)
+        shared = " (共享，全项目相同)" if sid in SHARED_MCP_IDS else ""
+        mark = "Y" if name in cursor_keys else "N"
+        print(f"  [{mark}] {sid} -> {name}{shared}")
+
+    for sid in profile_servers:
+        if sid in fixed_ids:
+            continue
+        name = tool_name(sid)
+        mark = "Y" if name in cursor_keys else "N"
+        print(f"  [{mark}] {sid} -> {name}")
+
+    return 0
+
+
 def list_profiles(project_root: Path) -> int:
     config = load_mcp_config(project_root)
     active = config.get("activeProfile", "")
@@ -711,14 +963,40 @@ def main() -> int:
     parser.add_argument("--mode", choices=["single", "unified"], default="single",
                         help="single=one profile at a time; unified=all profiles, switch via Cursor MCP UI")
     parser.add_argument("--apply-profile", help="Switch mcp.json to one profile slice (dev|sit|pre)")
+    parser.add_argument(
+        "--apply-profile-all",
+        help="Switch all projects in ~/.cursor/mcp.projects.json to one profile (dev|sit|pre)",
+    )
+    parser.add_argument(
+        "--projects-registry",
+        help="Override path to mcp.projects.json (default: ~/.cursor/mcp.projects.json)",
+    )
+    parser.add_argument(
+        "--show-project-mcp",
+        action="store_true",
+        help="Show MCP tool name mapping for --project-root",
+    )
     parser.add_argument("--list-profiles", action="store_true")
     args = parser.parse_args()
 
     project_root = Path(args.project_root).resolve()
     skill_root = Path(args.skill_root).resolve()
+    projects_registry = Path(args.projects_registry).resolve() if args.projects_registry else None
+
+    if args.show_project_mcp:
+        return show_project_mcp(project_root)
 
     if args.list_profiles:
         return list_profiles(project_root)
+
+    if args.apply_profile_all:
+        return apply_all_projects_profile(
+            skill_root=skill_root,
+            target=args.target,
+            profile=args.apply_profile_all.strip().lower(),
+            dry_run=args.dry_run,
+            projects_registry=projects_registry,
+        )
 
     if args.apply_profile:
         return apply_mcp_profile(

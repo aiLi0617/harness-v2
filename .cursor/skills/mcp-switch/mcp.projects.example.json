@@ -1,0 +1,19 @@
+{
+  "projects": [
+    {
+      "id": "broker",
+      "label": "经纪商",
+      "path": "D:/project/zfnjjs-two"
+    },
+    {
+      "id": "cloud",
+      "label": "云商",
+      "path": "D:/project/yunshang-project"
+    },
+    {
+      "id": "b2c",
+      "label": "B2C",
+      "path": "D:/project/BToC"
+    }
+  ]
+}
