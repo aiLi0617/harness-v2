@@ -88,23 +88,38 @@ void should_[预期行为]_when_[触发条件]() {
 
 **目标**：确认修复没有引入副作用，已有功能不受影响。
 
+### 测试命令（与 test-guard 门禁一致）
+
+| JaCoCo 状态 | 模块级 | 全量 |
+|---|---|---|
+| 已接入 check（`pom.xml` 含 `jacoco-maven-plugin` 的 `check` goal） | `mvn verify -pl <module> -am -q` | `mvn verify -q` |
+| 未接入或仅 report | `mvn test -pl <module> -am -q` | `mvn test -q` |
+
+已接入 JaCoCo check 时**禁止**仅用 `mvn test` 代替 `mvn verify`。
+
 ### 执行流程
 
 1. **运行所在模块的全量测试**：
 
 ```bash
-# Maven 项目
-mvn test -pl <module-name>
+# Maven — 已接入 JaCoCo check
+mvn verify -pl <module-name> -am -q
+
+# Maven — 未接入 JaCoCo
+mvn test -pl <module-name> -am -q
 
 # Gradle 项目
 gradle :module-name:test
 ```
 
-2. **运行项目全量测试**（如果模块测试通过）：
+2. **运行项目全量测试**（模块测试通过后）：
 
 ```bash
-# Maven
-mvn test
+# Maven — 已接入 JaCoCo check
+mvn verify -q
+
+# Maven — 未接入 JaCoCo
+mvn test -q
 
 # Gradle
 gradle test
@@ -117,9 +132,10 @@ gradle test
 
 ### 验证检查点
 
-- [ ] 模块测试全部通过
+- [ ] 模块测试全部通过（已接入 JaCoCo 时使用 `mvn verify`）
 - [ ] 项目全量测试通过（或失败项与本次修复无关）
 - [ ] 没有新增的测试失败
+- [ ] 已接入 JaCoCo check 时，覆盖率不低于基线（行 ≥ 78%，分支 ≥ 65%）
 
 ---
 

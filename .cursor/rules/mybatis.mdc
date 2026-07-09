@@ -39,7 +39,65 @@ alwaysApply: false
 - 禁止 MySQL `WITH RECURSIVE` — 递归由程序处理
 - 数据订正（delete/update）前须 **先 select 确认**
 
+## SQL 片段（`<sql>` / `<include>`）
+
+**默认原则：少封装、写完整。** 每条 `<select>` / `<update>` / `<delete>` 内应能直接读出完整 SQL；动态条件用 `<where>` + 内联 `<if>` / `<choose>`，**不拆 `<sql>` 片段**。
+
+### 允许（例外，从严）
+
+仅当**同一 Mapper 内 ≥3 个方法**引用且内容**完全不变**时，才允许 `<sql>` + `<include>`：
+
+| 片段类型 | 示例 | 限制 |
+|---------|------|------|
+| 固定列清单 | `Base_Column_List` | 仅列名，不含条件 |
+| 固定 JOIN | 多表关联且列/条件均不变 | 不含动态 `<if>` |
+
+除此以外一律**禁止**新建 `<sql>` 片段。
+
+### 禁止
+
+- **禁止为单条或 2 条查询拆 `<sql>` 片段** — 直接写在 `<select>` 内
+- **禁止把 `WHERE` / `FROM` / `ORDER BY` 拆成独立片段再 `<include>`** — 读一条 SQL 须跳转多处
+- **禁止在条件块（`WHERE` / `ON` / `HAVING`）内 `<include>` 注入动态条件**
+- **禁止 `<sql>` 内再嵌套 `<include>`** — 片段层级过深
+
+```xml
+<!-- ❌ 禁止：拆 WHERE 片段 + include 注入条件 -->
+<sql id="PageByUserWhere">...</sql>
+<select id="pageByUser">
+    SELECT ... <include refid="PageByUserWhere"/>
+</select>
+```
+
+### 推荐写法
+
+条件与主体 SQL **同处一个 `<select>`**，无需 `<include>`：
+
+```xml
+<!-- ✅ 推荐：完整 SQL 在一处 -->
+<select id="pageByUser" resultMap="CouponUserMap">
+    SELECT cu.id, cu.user_id, cu.status, cu.expire_time
+    FROM coupon_user cu
+    <where>
+        cu.deleted = 0
+        AND cu.user_id = #{req.userId}
+        <if test="req.statusTab == 'UNUSED'">
+            AND cu.status = 0 AND cu.expire_time &gt; NOW()
+        </if>
+        <if test="req.statusTab == 'USED'">
+            AND cu.status = 1
+        </if>
+        <if test="req.statusTab == 'EXPIRED'">
+            AND cu.status = 0 AND cu.expire_time &lt;= NOW()
+        </if>
+    </where>
+    ORDER BY cu.id DESC
+</select>
+```
+
+多方法共享条件时，**复制内联 `<if>` 块**优于拆成不可追踪的 include 链；若条件确实完全相同且 ≥3 处引用，再评估是否提取为 Java 层 Query 对象或单条可读的 `<sql>`（仅列清单/JOIN，不含 WHERE）。
 ## 补充规则
 
 - 编写 Mapper/SQL 前须 Read 对应 `*DO.java` 确认物理字段是否存在、类型与所在表
+- **禁止因同模块其他 Mapper 已有写法而照搬**（如 `<sql>`/`<include>` 拆 WHERE、HashMap 接结果等）——须按本章规则独立编写，参考文件与 rules 冲突时以 rules 为准
 - `in` 条件集合元素控制在 **1000** 以内；超过须分批或改查询方式

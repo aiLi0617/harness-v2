@@ -112,3 +112,4 @@ ErrorCode SERVICE_BAD_REQUEST = new ErrorCode(1_002_003_001, "数据不存在");
 
 - 新增错误码前先在模块附表检索是否已有同语义编码
 - 第三方错误须转义为本系统 ErrorCode，原始第三方码写入 errorMessage 或日志上下文
+- **禁止从其他模块或参考类的 `*ErrorCodeConstants` 复制号段或常量** — 新码须按统一规划类登记本模块号段后独立定义，不得因「类似功能已有编码」而复用他人第三段/第四段

@@ -11,19 +11,74 @@ alwaysApply: true
 - **已有测试全部通过才能提交** — 任何测试失败必须立即修复
 - **新增功能必须有对应测试** — 无测试的功能代码不允许提交
 - **测试失败必须立即修复** — 不能标记为 `@Disabled` 绕过
+- **覆盖率不低于基线** — 已接入 JaCoCo check 的项目，行覆盖 ≥ 78%、分支覆盖 ≥ 65%
+- **禁止绕过覆盖率检查** — 不得通过 `-Djacoco.skip=true` 等方式跳过门禁（经用户明确批准的临时例外除外）
+
+## 触发条件
+
+满足任一条件时，必须执行本门禁：
+
+- 变更 `src/main/java` 下业务代码
+- 变更 `src/test/java` 下测试代码
+- 变更被测模块的 `pom.xml` 测试/覆盖率插件配置
+
+仅变更文档、规则、配置模板且未触达上述路径时，可跳过本门禁。
 
 ## 执行方式
 
-变更后运行测试：
+### 1. 确定被测模块
 
-- Maven: `mvn test -q`
-- Gradle: `gradle test`
-- 至少运行变更涉及模块的测试
+- 单模块变更：在该模块目录执行
+- 多模块变更：对每个涉及模块分别执行，或在其共同父 POM 目录执行 `-pl mod1,mod2 -am`
+
+### 2. 选择命令
+
+| 项目状态 | Maven 命令 | Gradle 命令 |
+|---|---|---|
+| **已接入 JaCoCo check**（`pom.xml` 含 `jacoco-maven-plugin` 的 `check` goal） | `mvn verify -q` | `gradle check`（含 JaCoCo verification） |
+| **仅接入 JaCoCo report**（无 check goal） | `mvn test -q` | `gradle test jacocoTestReport` |
+| **未接入 JaCoCo** | `mvn test -q`（通过，但须记录技术债并按模板接入） | `gradle test` |
+
+已接入 JaCoCo 时**禁止**仅用 `mvn test` 代替 `mvn verify` — `test` 阶段不执行覆盖率 check。
+
+### 3. 覆盖率报告位置
+
+- Maven JaCoCo HTML：`target/site/jacoco/index.html`
+- 构建失败时优先查看 `[ERROR] Rule violated for bundle` 行
+
+### 4. 业务项目 Maven 接入
+
+业务项目（broker / b2cmall 等）须在 BOM（如 `broker-dependencies/pom.xml`）接入 JaCoCo + Surefire 模板：
+
+- 模板片段：`docs/templates/maven-jacoco-surefire.xml`
+- 接入步骤：`docs/templates/maven-test-coverage-integration.md`
+
+## 质量门禁（ERROR 级）
+
+| 门禁项 | 阈值 |
+|---|---|
+| 单元测试通过率 | 100% |
+| 行覆盖率 | ≥ 78% |
+| 分支覆盖率 | ≥ 65% |
+| 新增代码覆盖率 | ≥ 70%（需 SonarQube / diff 覆盖率；本地以模块整体覆盖率为准） |
 
 ## 测试失败处理
 
-1. 阅读失败测试的断言信息
-2. 判断是代码 bug 还是测试需要更新
+1. 阅读失败测试的断言信息或 JaCoCo 未覆盖行
+2. 判断是代码 bug、测试缺失还是测试需更新
 3. 修复问题
-4. 重新运行测试确认全部通过
+4. 重新执行 `mvn verify`（或等效命令）确认通过
 5. 确认通过后再提交
+
+## 新增代码测试检查
+
+变更 `src/main/java` 时，须确认：
+
+- [ ] 对应 `*Test.java` 已新增或更新
+- [ ] 正常路径与主要异常/边界分支有断言
+- [ ] 未使用 `@Disabled` 掩盖失败
+
+## 补充规则
+
+- 单元测试套件执行时间目标 ≤ 3 分钟；明显超时须排查慢测试或并行配置
+- Flaky Test 零容忍：随机失败须立即根因修复，不得合并

@@ -71,12 +71,17 @@
 
 ### 第四步：定义验证方式
 
-每个子任务必须有可执行的验证标准：
+每个子任务必须有可执行的验证标准。涉及单元测试/Service 变更时，**按项目 JaCoCo 接入状态选择命令**（与 test-guard 门禁一致）：
+
+| JaCoCo 状态 | 模块级命令 | 全量命令 |
+|---|---|---|
+| 已接入 check（`pom.xml` 含 `jacoco-maven-plugin` 的 `check` goal） | `mvn verify -pl <module> -am -q` | `mvn verify -q` |
+| 未接入或仅 report | `mvn test -pl <module> -am -q` | `mvn test -q` |
 
 | 验证类型 | 适用场景 | 示例 |
 |----------|----------|------|
-| 编译通过 | 所有任务 | `mvn compile` 成功 |
-| 单元测试 | Service/Repository | `mvn test -pl module` 通过 |
+| 编译通过 | 所有任务 | `mvn compile -q` 成功 |
+| 单元测试 | Service / 测试类 | 上表模块级命令通过 |
 | 集成测试 | Controller/API | HTTP 请求返回预期响应 |
 | DDL 验证 | 数据库变更 | 表结构与 ddl.md 一致 |
 | Lint 检查 | 所有代码任务 | 无新增 lint 错误 |

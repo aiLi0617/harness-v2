@@ -47,3 +47,7 @@ private Integer contractType;
 // ✅ 枚举常量比较
 if (OrderEnums.OrderContractTypeEnum.PAPER_CONTRACT.getCode().equals(contractType)) { ... }
 ```
+
+## 补充规则
+
+- **禁止因参考 VO/DTO 使用 String 枚举名或魔法字符串比较而照搬** — 须按本章 Integer `code` 规范独立设计，参考实现与本章冲突时以本章为准

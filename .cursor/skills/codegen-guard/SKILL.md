@@ -11,6 +11,12 @@
 
 ## 检查清单
 
+### 0. 规则优先（写代码前，强制）
+
+1. 读取 `rules-loader.mdc`，按当前文件类型/场景加载对应 rules（Java → 编写/修改 Java 代码；Mapper XML → mybatis 等）
+2. **对照已加载 rules 设计实现**，而非打开同目录最近似文件照抄结构
+3. 若需参考已有实现，仅提取分层与命名，**逐条核对**参考代码是否违反已加载 rules；违规处不得复制
+
 ### 1. 分层合规检查
 
 验证新代码是否放置在正确的架构层：
@@ -79,6 +85,15 @@ Controller → Service → Repository → Entity
 - 接口路径与 `docs/artifacts/api-contract.md` 中的定义一致
 - 实体字段与 `docs/artifacts/ddl.md` 中的表结构一致
 
+### 7. 禁止抄代码检查
+
+- [ ] **规则先于参考**：已加载当前场景 rules，非仅凭同包/同模块文件写法落笔
+- [ ] **`@author` 来源**：必须来自 `git config user.name`，**禁止**从参考类（如 `MallSeller*`、同模块已有类）复制作者名
+- [ ] **`@date` 来源**：必须为当前本地日期时间，禁止复制参考类日期
+- [ ] **元数据独立生成**：允许参考分层与命名，禁止整段复制类头 Javadoc 后只改 `@Description`
+- [ ] **错误码/常量/配置**：禁止从参考类原样复制错误码号段、魔法值、`ignore-urls`/`ignore-tables` 条目——须对照当前任务 rules 重新核对
+- [ ] **Mapper XML**：禁止因同模块其他 Mapper 已有 `<sql>`/`<include>`/拆 WHERE 片段而照搬——须对照 mybatis 规则独立编写
+
 ## 输出格式
 
 检查全部通过：
@@ -86,7 +101,7 @@ Controller → Service → Repository → Entity
 ## 代码生成合规检查 — 通过
 - **文件**: {file-path}
 - **类型**: {Controller/Service/Entity/...}
-- **检查项**: 6/6 通过
+- **检查项**: 8/8 通过
 - **状态**: 允许创建
 ```
 
@@ -95,7 +110,7 @@ Controller → Service → Repository → Entity
 ## 代码生成合规检查 — 阻塞
 - **文件**: {file-path}
 - **类型**: {Controller/Service/Entity/...}
-- **通过**: N/6
+- **通过**: N/8
 - **问题**:
   1. [分层违规] Controller 中包含业务逻辑 → 移至 Service 层
   2. [命名不合规] 方法名 `process` 不符合动词+名词规则 → 建议改为 `processOrder`

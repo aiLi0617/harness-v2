@@ -23,7 +23,7 @@ alwaysApply: false
 |--------|------|--------|-----------|
 | `ones-mcp` | ONES 缺陷管理（查询/更新缺陷） | `agents/ones-issue-fetcher`、`agents/bug-analyst`（可选） | bugfix |
 | `feishu-mcp` | 飞书 API（云文档发布、消息通知） | `skills/hld-to-feishu`、`skills/lld-to-feishu` | feature-delivery |
-| `chrome-devtools-mcp` | 浏览器调试（页面检查、网络请求） | 按需 | 通用 |
+| `playwright-mcp` | 浏览器自动化（页面操作、快照、截图） | 按需 | 通用 |
 | `codegraph-mcp` | 本地代码知识图谱（符号搜索/调用链/影响分析） | 按需 | 通用 |
 | `loki-mcp` | Loki 日志查询（LogQL） | `agents/loki-log-investigator` | bugfix |
 

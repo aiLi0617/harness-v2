@@ -51,3 +51,4 @@ if (obj != null && obj.getXxx() != null && obj.getXxx().getYyy() != null) ...
 ## 补充规则
 
 - 判空禁止直接使用 `== null` / `!= null`，统一使用工具方法如 `Objects.isNull()`、`Objects.nonNull()`、`ObjectUtil.isNull()` 或 `CollUtil.isEmpty()` 等
+- **禁止因同模块参考类使用 `== null` / `!= null` 而照搬** — 参考实现与本章冲突时以本章为准

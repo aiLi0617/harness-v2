@@ -18,8 +18,10 @@
 - [ ] 所有已有单元测试通过
 - [ ] 所有已有集成测试通过
 - [ ] 新增功能有对应的测试用例
-- [ ] 测试覆盖率不低于变更前（如有覆盖率要求）
-- **失败处理**：停止后续检查，回退给 implementer 修复失败的测试
+- [ ] 已接入 JaCoCo check 的项目：变更模块执行 `mvn verify` 通过（行覆盖 ≥ 78%，分支覆盖 ≥ 65%）
+- [ ] 未接入 JaCoCo 的项目：至少执行 `mvn test` 通过，并记录须按 `docs/templates/maven-test-coverage-integration.md` 接入
+- [ ] 无 `@Disabled` 绕过失败测试
+- **失败处理**：停止后续检查，回退给 implementer 修复失败的测试或补覆盖率
 
 ### 第三关：Lint / 静态分析检查
 - [ ] 无新增 Lint 错误

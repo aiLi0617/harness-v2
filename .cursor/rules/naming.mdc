@@ -54,3 +54,4 @@ alwaysApply: false
 ## 补充规则
 
 - ⚠️ 禁止在代码中使用全限定类名（如 `com.broker.orch.businessfrontend.controller.admin.order.vo.resp.OrderSubmitRespVO`）——必须在文件头部添加 `import` 语句，方法签名、变量声明、泛型参数等一律使用短类名；仅当同包下存在同名类冲突时才允许全限定，且需加注释说明原因
+- **禁止因同模块参考类命名违规而继承** — 如拼音混合、不规范缩写、POJO 布尔 `is` 前缀等；参考实现与本章冲突时以本章为准
