@@ -24,7 +24,8 @@ alwaysApply: true
 | comments | 复制 `@author`/`@date`/`@version`、整段类头 Javadoc、批量套用注释模板；private 方法堆砌 Javadoc、`@Override` 上重复方法注释 |
 | naming | 拼音混合、不规范缩写、POJO 布尔 `is` 前缀 |
 | pojo | `is` 前缀布尔属性、基本类型字段、类内默认值 |
-| enums | String 枚举名、魔法字符串比较（须用 Integer `code`） |
+| enums | String 枚举名、魔法字符串比较（须用 Integer `code`）、按字段单独新建枚举类（须用表级嵌套子枚举） |
+| testing | Mock 数据用 `null` 占位（须查库取真实样例值后硬编码到 Arrange） |
 | exceptions | 空 catch、`catch (Exception)` 吞异常、`e.printStackTrace()`、用异常做流程分支 |
 | logging | `System.out`、`+` 拼接、循环内逐条 INFO、关键链路降为 DEBUG |
 | api-design | 全 POST、返回 Map、冗余 `@PathVariable("name")`、返回基本类型 |

@@ -149,3 +149,9 @@ void should_calculate_total_when_items_provided() {
 
 - 不假设数据已存在，用程序插入准备数据
 - 设定自动回滚或使用特定前缀标识测试数据
+
+## 补充规则
+
+- 编写单元测试时，若 Mock / Fixture 所需字段（外键 ID、状态码、枚举 `code`、关联实体主键等）无法从 LLD、DDL 或已有代码确定，须通过开发环境数据库 MCP（`{env}-mysql-mcp` 或 `dbx`）查询相关表获取真实样例值，再写入 Arrange 阶段的 Mock 数据；**禁止**用 `null` 占位或编造无业务含义的假 ID
+- 查询数据库仅用于**准备测试数据**；测试执行仍须 Mock 依赖、不连接数据库（与「单元测试不依赖外部服务」一致）
+- MCP 不可用时，从 `ddl.md`、Entity 字段注释、已有枚举 `code` 推导

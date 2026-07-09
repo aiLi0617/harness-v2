@@ -11,6 +11,12 @@ alwaysApply: false
 - 枚举类必须以 `Enum` 后缀（如 `ProcessStatusEnum`）
 - 数据库字段对应的枚举存放在以 `{数据表名}Enum` 命名的枚举文件中（如 `shopping_cart` 表 → `ShoppingCartEnum`）
 
+## 表枚举组织（嵌套子枚举）
+
+- 同一数据表的多个枚举字段，统一放在 `{表名驼峰}Enum` **一个文件**中，以**嵌套子枚举**组织（如 `OrderEnum.ContractTypeEnum`）；**禁止**为单个字段单独新建顶层枚举类
+- 新增字段枚举值时，在既有表枚举类中追加子枚举；**禁止**新建 `OrderStatusEnum`、`OrderTypeEnum` 等按字段拆分的独立文件
+- 子枚举命名：`{字段语义}Enum`（如 `order` 表 `contract_type` 字段 → `OrderEnum.ContractTypeEnum`）
+
 ## 使用场景
 
 - **固定范围变化用 enum** — 存在延伸属性时优先 enum 而非魔法字符串
@@ -45,5 +51,9 @@ if ("PAPER".equals(contractType)) { ... }
 private Integer contractType;
 
 // ✅ 枚举常量比较
-if (OrderEnums.OrderContractTypeEnum.PAPER_CONTRACT.getCode().equals(contractType)) { ... }
+if (OrderEnum.ContractTypeEnum.PAPER_CONTRACT.getCode().equals(contractType)) { ... }
 ```
+
+## 补充规则
+
+- 枚举必须与数据表对应：按表聚合为 `{TableName}Enum`，字段级枚举以嵌套子枚举形式内聚，不得为单个 DB 字段新建独立枚举类
