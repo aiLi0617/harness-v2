@@ -20,7 +20,7 @@ $Configurator = Join-Path $PSScriptRoot "mcp-configurator.py"
 $workspacePath = Resolve-McpWorkspacePath -SkillRoot $SkillRoot
 
 if (-not (Test-Path $workspacePath)) {
-    throw "Missing $workspacePath. Copy mcp-switch/mcp.workspace.example.json to mcp-switch/mcp.workspace.json and edit."
+    throw "Missing $workspacePath. Ensure mcp-switch/mcp.workspace.json exists (clone repo)."
 }
 
 $python = Get-Command python -ErrorAction SilentlyContinue

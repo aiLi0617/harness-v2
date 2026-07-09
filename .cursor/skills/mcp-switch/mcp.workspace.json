@@ -1,9 +1,11 @@
 {
-  "activeProfile": "pre",
+  "activeProfile": "dev",
   "defaultProfile": "dev",
+  "dataAccess": "dbx-mcp",
   "fixedServers": [
     "codegraph",
-    "ONES"
+    "ONES",
+    "dbx"
   ],
   "fixedEnv": {
     "ONES_MCP_URL": "https://sz.ones.cn/mcp"
@@ -12,7 +14,9 @@
     "UVX_BIN": "D:\\miniconda3\\Scripts\\uvx.exe",
     "NPX_BIN": "D:\\tool\\node\\npx.cmd",
     "LOKI_MCP_BIN": "C:\\Users\\25143\\Documents\\Codex\\bin\\loki-mcp.exe",
-    "CODEGRAPH_BIN": "C:\\Users\\25143\\AppData\\Roaming\\npm\\codegraph.cmd"
+    "CODEGRAPH_BIN": "C:\\Users\\25143\\AppData\\Roaming\\npm\\codegraph.cmd",
+    "NODE_BIN": "D:\\tool\\node\\node.exe",
+    "DBX_MCP_ENTRY": "C:\\Users\\25143\\AppData\\Roaming\\npm\\node_modules\\@dbx-app\\mcp-server\\dist\\index.js"
   },
   "projects": {
     "broker": {
@@ -23,8 +27,6 @@
           "label": "本地开发",
           "servers": [
             "loki-mcp",
-            "mysql-mcp",
-            "redis-mcp",
             "xxl-job-mcp",
             "nacos-mcp-router",
             "rocketmq-mcp"
@@ -53,8 +55,6 @@
           "label": "SIT 环境",
           "servers": [
             "loki-mcp",
-            "mysql-mcp",
-            "redis-mcp",
             "xxl-job-mcp",
             "nacos-mcp-router",
             "rocketmq-mcp"
@@ -83,11 +83,7 @@
         "pre": {
           "label": "预发环境",
           "servers": [
-            "loki-mcp",
-            "mysql-mcp",
-            "redis-mcp",
-            "xxl-job-mcp",
-            "rocketmq-mcp"
+            "loki-mcp"
           ],
           "env": {
             "LOKI_URL": "http://192.168.6.42:30100",
@@ -116,10 +112,9 @@
           "label": "本地开发",
           "servers": [
             "loki-mcp",
-            "mysql-mcp",
-            "redis-mcp",
             "xxl-job-mcp",
-            "nacos-mcp-router"
+            "nacos-mcp-router",
+            "rocketmq-mcp"
           ],
           "env": {
             "LOKI_URL": "http://192.168.0.212:3100",
@@ -144,10 +139,9 @@
           "label": "SIT 环境",
           "servers": [
             "loki-mcp",
-            "mysql-mcp",
-            "redis-mcp",
             "xxl-job-mcp",
-            "nacos-mcp-router"
+            "nacos-mcp-router",
+            "rocketmq-mcp"
           ],
           "env": {
             "LOKI_URL": "http://192.168.0.212:3100",
@@ -171,9 +165,7 @@
         "pre": {
           "label": "预发环境",
           "servers": [
-            "loki-mcp",
-            "mysql-mcp",
-            "xxl-job-mcp"
+            "loki-mcp"
           ],
           "env": {
             "LOKI_URL": "http://124.71.81.92:3100",
@@ -199,8 +191,6 @@
           "label": "B2C Mall DEV",
           "servers": [
             "loki-mcp",
-            "mysql-mcp",
-            "redis-mcp",
             "xxl-job-mcp",
             "nacos-mcp-router",
             "rocketmq-mcp"
@@ -230,8 +220,6 @@
           "label": "B2C Mall SIT",
           "servers": [
             "loki-mcp",
-            "mysql-mcp",
-            "redis-mcp",
             "xxl-job-mcp",
             "nacos-mcp-router",
             "rocketmq-mcp"
@@ -261,10 +249,7 @@
         "pre": {
           "label": "B2C Mall PRE",
           "servers": [
-            "loki-mcp",
-            "mysql-mcp",
-            "redis-mcp",
-            "xxl-job-mcp"
+            "loki-mcp"
           ],
           "env": {
             "LOKI_URL": "http://192.168.6.42:30100",
@@ -283,5 +268,9 @@
         }
       }
     }
-  }
+  },
+  "dataLayerDbServers": [
+    "mysql-mcp",
+    "redis-mcp"
+  ]
 }

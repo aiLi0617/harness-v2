@@ -12,6 +12,9 @@ param(
     [ValidateSet("dev", "sit", "pre")]
     [string]$Profile,
 
+    [ValidateSet("dbx-mcp", "profile-mcp")]
+    [string]$DataAccess = "",
+
     [string]$ProjectsRegistry = "",
 
     [switch]$DryRun,
@@ -27,7 +30,19 @@ $Configurator = Join-Path $PSScriptRoot "mcp-configurator.py"
 $workspacePath = Resolve-McpWorkspacePath -SkillRoot $SkillRoot
 
 if (-not (Test-Path $workspacePath)) {
-    throw "Missing $workspacePath. Copy mcp-switch/mcp.workspace.example.json to mcp-switch/mcp.workspace.json and edit."
+    throw "Missing $workspacePath. Ensure mcp-switch/mcp.workspace.json exists (clone repo)."
+}
+
+if ($DataAccess) {
+    $SwitchDataAccess = Join-Path $PSScriptRoot "switch-data-access.ps1"
+    if (-not (Test-Path $SwitchDataAccess)) {
+        throw "Missing $SwitchDataAccess"
+    }
+    $daArgs = @($SwitchDataAccess, $DataAccess, "-Profile", $Profile)
+    if ($DryRun) { $daArgs += "-DryRun" }
+    if ($NoReloadWindow) { $daArgs += "-NoReloadWindow" }
+    & $daArgs[0] @($daArgs[1..($daArgs.Length - 1)])
+    exit $LASTEXITCODE
 }
 
 $python = Get-Command python -ErrorAction SilentlyContinue
@@ -60,7 +75,15 @@ if ($LASTEXITCODE -eq 0 -and -not $DryRun) {
         if (Test-Path $RocketMqRestart) {
             Write-Host ""
             Write-Host "--- rocketmq-mcp restart [$projectId / $Profile] ---"
-            & $RocketMqRestart -Profile $Profile -ProjectRoot $root -ProjectId $projectId -WorkspaceConfig $workspacePath
+            try {
+                & $RocketMqRestart -Profile $Profile -ProjectRoot $root -ProjectId $projectId -WorkspaceConfig $workspacePath
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Warning "rocketmq-mcp restart failed for ${projectId}/${Profile} (exit $LASTEXITCODE); continuing."
+                }
+            }
+            catch {
+                Write-Warning "rocketmq-mcp restart failed for ${projectId}/${Profile}: $_"
+            }
         }
     }
     $ReloadScript = Join-Path $PSScriptRoot "reload-cursor-window.ps1"

@@ -58,7 +58,7 @@ if ! command -v "$PYTHON" >/dev/null 2>&1; then
 fi
 
 if [[ ! -f "$WORKSPACE" ]]; then
-  echo "Missing $WORKSPACE. Run bootstrap-mcp.ps1 or copy mcp.workspace.example.json first." >&2
+  echo "Missing $WORKSPACE. Run bootstrap-mcp.ps1 or ensure mcp.workspace.json exists (clone repo)." >&2
   exit 1
 fi
 

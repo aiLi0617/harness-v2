@@ -7,8 +7,8 @@
 ```
 mcp-registry.json
         +
-~/.cursor/mcp.workspace.json           地址、tools、项目 path（无密钥）
-~/.cursor/mcp.workspace.secrets.json   密钥（加载时自动合并）
+mcp-switch/mcp.workspace.json           地址、tools、项目 path（无密钥）
+mcp-switch/mcp.workspace.secrets.json   密钥（加载时自动合并）
         ↓
 switch-*.ps1 / mcp-configurator.py
         ↓
@@ -26,6 +26,8 @@ switch-*.ps1 / mcp-configurator.py
 | 字段 | 说明 |
 |------|------|
 | `activeProfile` | 当前环境；switch 会更新 |
+| `dataAccess` | `dbx-mcp` 或 `profile-mcp` |
+| `dataLayerDbServers` | profile 模式下启用的 mysql/redis/es MCP |
 | `tools` | `UVX_BIN`、`NPX_BIN`、`LOKI_MCP_BIN` 等 |
 | `projects.<id>.path` | 本机代码库绝对路径 |
 | `projects.<id>.profiles.<name>.servers` | 该环境启用的 MCP |
@@ -43,7 +45,7 @@ python .cursor/skills/shared/mcp-switch/scripts/mcp-configurator.py `
 ### 新增 profile
 
 1. 编辑 `mcp.workspace.json` → `projects.<id>.profiles.uat`
-2. 同步 `mcp.workspace.secrets.example.json` 中对应 secrets
+2. 同步 `mcp.workspace.secrets.json` 中对应 secrets
 3. `switch-all-mcp-profiles.ps1 uat` 或 `switch-mcp-profile.ps1 uat`
 
 ## 团队 dev / sit 差异

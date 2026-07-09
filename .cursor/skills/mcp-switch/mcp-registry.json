@@ -1,9 +1,16 @@
 {
   "$schema": "./mcp-registry.schema.json",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "defaults": ["codegraph", "ONES", "loki-mcp"],
+  "layerDefinitions": {
+    "core": "固定 MCP（始终启用）",
+    "dbx": "DBX 数据层 → fixedServers；与 db 互斥（mcp-dbx）",
+    "db": "Profile MySQL/Redis/ES；随 dev/sit/pre 切换（mcp-db）",
+    "profile": "其他分环境 profile MCP（Loki、XXL、Nacos、MQ 等）"
+  },
   "servers": {
     "codegraph": {
+      "layer": "core",
       "label": "CodeGraph 代码知识图谱",
       "repo": "https://github.com/colbymchenry/codegraph",
       "transport": "stdio",
@@ -20,6 +27,7 @@
       }
     },
     "ONES": {
+      "layer": "core",
       "label": "ONES 项目管理 / Wiki",
       "repo": "https://sz.ones.cn/mcp",
       "transport": "http",
@@ -33,6 +41,25 @@
       "envDefaults": {
         "ONES_MCP_URL": "https://sz.ones.cn/mcp"
       }
+    },
+    "dbx": {
+      "layer": "dbx",
+      "label": "DBX 数据库 MCP（MySQL / Redis / ES）",
+      "repo": "https://github.com/t8y2/dbx/tree/main/packages/mcp-server",
+      "transport": "stdio",
+      "prerequisites": [
+        "Node.js 22+",
+        "DBX 桌面端已配置连接（读取本机 dbx.db）"
+      ],
+      "install": {
+        "all": "npm install -g @dbx-app/mcp-server"
+      },
+      "config": {
+        "command": "{{NODE_BIN}}",
+        "args": ["{{DBX_MCP_ENTRY}}"]
+      },
+      "envKeys": [],
+      "notes": "可选固定 MCP；npm i -g @dbx-app/mcp-server；读取 DBX 桌面端连接（无需 dbx CLI）"
     },
     "feishu-cli": {
       "label": "飞书 Lark CLI（终端 + Skills，非 MCP）",
@@ -50,6 +77,7 @@
       "notes": "官方 CLI 无 MCP 传输层；Agent 通过终端 lark-cli + lark-* Skills 操作飞书"
     },
     "loki-mcp": {
+      "layer": "profile",
       "label": "Grafana Loki 日志查询",
       "repo": "https://github.com/grafana/loki-mcp",
       "transport": "stdio",
@@ -93,6 +121,7 @@
       "notes": "Cursor 通过 stdio 启动 loki-mcp-server，LOKI_URL 指向 Loki 后端（dev: 192.168.3.25:3100）"
     },
     "mysql-mcp": {
+      "layer": "db",
       "label": "MySQL 数据库",
       "repo": "https://github.com/benborla/mcp-server-mysql",
       "transport": "stdio",
@@ -119,6 +148,7 @@
       "notes": "写操作默认关闭；MYSQL_DB 留空=多库模式（dev/sit 均如此）；需 ALLOW_INSERT_OPERATION 等 env 显式开启"
     },
     "redis-mcp": {
+      "layer": "db",
       "label": "Redis",
       "repo": "https://github.com/redis/mcp-redis",
       "transport": "stdio",
@@ -134,6 +164,7 @@
       "notes": "profile.env 设 REDIS_URL（含 db）；无 ACL 时用 redis://:password@host:port/db，勿写 root: 前缀；密码原文，> 勿 URL 编码（%3E 会导致认证失败）"
     },
     "elasticsearch-mcp": {
+      "layer": "db",
       "label": "Elasticsearch（官方 MCP）",
       "repo": "https://github.com/elastic/mcp-server-elasticsearch",
       "transport": "stdio",
@@ -169,6 +200,7 @@
       "notes": "【默认未启用】官方 @elastic/mcp-server-elasticsearch；加入 profiles.*.servers 并配置 ES_URL + 认证后 switch"
     },
     "xxl-job-mcp": {
+      "layer": "profile",
       "label": "XXL-JOB 任务调度",
       "repo": "https://github.com/zz-wenzb/xxl-job-mcp",
       "transport": "stdio",
@@ -198,6 +230,7 @@
       "notes": "configurator 从 profile env 生成 .cursor/.generated/xxl-job-<profile>.yaml；支持 XXL-JOB 2.x"
     },
     "nacos-mcp-router": {
+      "layer": "profile",
       "label": "Nacos MCP Router",
       "repo": "https://github.com/nacos-group/nacos-mcp-router",
       "transport": "stdio",
@@ -225,6 +258,7 @@
       "notes": "Router 模式：search/add/use 代理 Nacos 注册的 MCP；search 返回空列表正常；NACOS_NAMESPACE 填 UUID 或 public"
     },
     "rocketmq-mcp": {
+      "layer": "profile",
       "label": "RocketMQ 管理",
       "repo": "https://github.com/francisoliverlee/rocketmq-mcp",
       "transport": "http",
