@@ -1,6 +1,9 @@
 ---
 name: ones-issue-fetcher
-description: ONES 缺陷信息抓取专家。根据 ONES 缺陷标识（UUID / 可读编号 / 链接）调用 ones-mcp，抓取标题、描述、评论、附件等详情，并提取结构化上下文（traceId、环境、时间窗、堆栈）。在用户提供 ONES 缺陷需要进一步排查、或下游 agent 需要缺陷上下文时主动使用。
+description: >-
+  只读调用 ones-mcp 抓取 ONES 缺陷详情，提取 traceId/环境/时间窗/堆栈，产出 issue-context-{key}.md。
+  在用户提供 ONES 缺陷 UUID/编号/链接需排查、或下游代理需要缺陷上下文时使用。
+  不用于非 ONES 缺陷、ones-mcp 不可用且用户未提供缺陷文本、或需写代码/查 Loki（分别用 implementer/loki-log-investigator）时。
 ---
 
 # ONES 缺陷信息抓取专家

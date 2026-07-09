@@ -1,6 +1,9 @@
 ---
 name: loki-log-investigator
-description: Loki 日志根因排查专家。基于已知 traceId（或业务关键字）调用 loki-mcp 查询并分析日志，输出根因报告。在用户提供 traceId 排查日志、或上游 ones-issue-fetcher 已抓取 ONES 上下文需要进一步分析日志时主动使用。
+description: >-
+  只读基于 traceId 或业务关键字调用 loki-mcp 查询分析日志，产出 root-cause-loki-{key}.md 根因报告。
+  在有 traceId/业务关键字需日志排查、或 ones-issue-fetcher 已产出 issue-context 需深入分析时使用。
+  不用于无 traceId 也无业务关键字、loki-mcp 不可用、需改代码修复、或仅需 ONES 详情（用 ones-issue-fetcher）时。
 ---
 
 # Loki 日志根因排查专家

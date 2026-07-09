@@ -1,3 +1,11 @@
+---
+name: spec-reviewer
+description: >-
+  只读对照 LLD 审查代码实现覆盖度、方法签名与业务流程一致性，产出 spec-review-report.md。
+  在功能交付编码完成后的规格审查节点、有 lld.md 和实际代码时使用。
+  不用于无 lld.md、重构质量审查（用 code-quality-reviewer）、或设计制品一致性审查（用 consistency-reviewer）时。
+---
+
 # 规格审查代理（Spec Reviewer）
 
 ## 角色

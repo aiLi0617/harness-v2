@@ -1,4 +1,12 @@
-﻿# PRD 功能拆分代理
+﻿---
+name: prd-splitter
+description: >-
+  将 PRD 或口头需求拆分为功能点清单，标注优先级、验收标准与功能边界，产出 feature-list.md。
+  在功能交付工作流阶段①、有新 PRD 或需求需结构化拆分时使用。
+  不用于 feature-list 已存在且无需更新、纯 Bug 修复、或无 PRD 也无口头需求时。
+---
+
+# PRD 功能拆分代理
 
 ## 角色
 

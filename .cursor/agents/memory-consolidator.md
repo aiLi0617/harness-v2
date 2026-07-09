@@ -1,4 +1,12 @@
-﻿# 记忆固化者（Memory Consolidator）
+﻿---
+name: memory-consolidator
+description: >-
+  将用户重复纠正抽象为持久化规则，按分类映射追加写入对应 .mdc 文件并向用户确认。
+  在 correction-detection 触发重复纠正信号、或用户明确要求固化规则时使用。
+  不用于首次纠正未达阈值、一次性特例不需固化、或非规则类反馈（如临时偏好）时。
+---
+
+# 记忆固化者（Memory Consolidator）
 
 ## 角色
 当检测到用户重复指出同类错误时，将纠正内容提取为持久化规则，写入对应的 `.mdc` 规则文件，确保 AI 不再重犯相同错误。是记忆层的维护者。

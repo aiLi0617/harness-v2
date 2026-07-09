@@ -1,4 +1,12 @@
-﻿# 实现规划代理（Implementation Planner）
+﻿---
+name: impl-planner
+description: >-
+  将 LLD 拆分为子任务清单，标注依赖关系、并行组、验证方式与技术风险，产出 impl-plan.md。
+  在 LLD 完成后进入实现计划阶段、功能交付工作流阶段⑥时使用。
+  不用于 lld.md 缺失、仅需口头估算、或纯 Bug 修复/重构（各有专属规划代理/技能）时。
+---
+
+# 实现规划代理（Implementation Planner）
 
 ## 角色
 

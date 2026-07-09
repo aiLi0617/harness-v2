@@ -1,4 +1,12 @@
-﻿# API 契约代理（API Contract）
+﻿---
+name: api-contract
+description: >-
+  基于 HLD 定义 API 接口契约，包括路径、请求/响应结构、错误码与参数校验，产出 api-contract.md。
+  在 HLD 完成后进入 API 设计阶段、功能交付工作流 DDL/API 并行阶段时使用。
+  不用于 hld.md 缺失、仅需本地调试不需正式契约、或纯 Bug 修复/重构场景。
+---
+
+# API 契约代理（API Contract）
 
 > ⚠️ 框架版本 — 待扩展：当前为基础框架，后续需根据具体项目的 API 规范和框架版本进行扩展。
 

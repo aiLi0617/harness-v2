@@ -1,10 +1,9 @@
 ---
 name: mcp-dbx
 description: >-
-  MySQL, Redis, and Elasticsearch via DBX MCP server across broker/cloud/b2c
-  and dev/sit/pre using desktop connection names. Enable manually when
-  workspace dataAccess=dbx-mcp. Mutually exclusive with mcp-db profile MCPs.
-  Complements mcp-switch for Loki, XXL-Job, Nacos, RocketMQ.
+  通过 DBX MCP 访问 MySQL/Redis/ES，连接来自 DBX 桌面端（dev/sit/pre × broker/cloud/b2c）。
+  在 workspace dataAccess=dbx-mcp 且于 Cursor 设置中手动启用本 skill 时使用。
+  不用于 dataAccess=profile-mcp（改用 mcp-db）、与 mcp-dbx 互斥的 profile MCP 模式、或仅需 mcp-switch 切换 Loki/XXL-Job 等非数据层服务时。
 disable-model-invocation: true
 ---
 

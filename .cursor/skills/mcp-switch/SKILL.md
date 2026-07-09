@@ -1,8 +1,9 @@
 ---
 name: mcp-switch
 description: >-
-  MCP environment switching (dev/sit/pre) for broker/cloud/b2c.
-  Configure mcp.workspace.json + secrets; run switch-all-mcp-profiles.
+  管理 MCP 环境切换（dev/sit/pre），配置 mcp.workspace.json 与 secrets，执行 switch-all-mcp-profiles 生成 ~/.cursor/mcp.json。
+  在需切换 broker/cloud/b2c 环境 MCP、初始化或变更 workspace MCP 配置后使用。
+  不用于仅需 DBX 数据访问且不需 profile 切换时、MCP 已正确配置无需变更、或用户未提供 secrets 时。
 disable-model-invocation: true
 ---
 

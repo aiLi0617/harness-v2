@@ -1,4 +1,12 @@
-﻿# 概要设计代理（Architect HLD）
+﻿---
+name: architect-hld
+description: >-
+  基于功能清单和头脑风暴产出概要设计，定义模块划分、接口概览、数据流、技术选型与非功能需求，产出 hld.md。
+  在功能交付工作流概要设计阶段、feature-list 与 brainstorm-result 已就绪时使用。
+  不用于必读制品缺失、仅需改一行代码、或已进入详细设计/编码阶段时。
+---
+
+# 概要设计代理（Architect HLD）
 
 ## 角色
 

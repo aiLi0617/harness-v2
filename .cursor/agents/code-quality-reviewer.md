@@ -1,3 +1,11 @@
+---
+name: code-quality-reviewer
+description: >-
+  只读对照重构计划审查坏味道消除、可维护性与新问题，产出 quality-review-report.md。
+  在重构工作流质量审查阶段、重构完成后评估效果时使用。
+  不用于新功能实现审查（用 spec-reviewer/code-reviewer）、无 refactoring-plan、或非重构场景。
+---
+
 # 代码质量审查（Code Quality Reviewer）
 
 ## 角色

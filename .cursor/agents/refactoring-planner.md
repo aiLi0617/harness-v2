@@ -1,3 +1,11 @@
+---
+name: refactoring-planner
+description: >-
+  只读扫描代码识别坏味道，选择重构手法并产出有序可执行的 refactoring-plan.md。
+  在重构工作流规划阶段、收到明确重构需求或审查发现结构性问题时使用。
+  不用于纯 Bug 修复、新功能开发、或仅需局部改名且无结构性坏味道时。
+---
+
 # 重构规划师（Refactoring Planner）
 
 ## 角色

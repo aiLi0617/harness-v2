@@ -1,10 +1,9 @@
 ---
 name: mcp-db
 description: >-
-  MySQL, Redis, and Elasticsearch via per-profile MCP servers (mysql-mcp,
-  redis-mcp, elasticsearch-mcp) switched with dev/sit/pre by mcp-switch.
-  Enable manually when workspace dataAccess=profile-mcp. Mutually exclusive
-  with mcp-dbx. Requires mcp-switch for environment switching.
+  通过分环境 profile MCP（mysql-mcp、redis-mcp、elasticsearch-mcp）访问 MySQL/Redis/ES，随 dev/sit/pre 切换。
+  在 workspace dataAccess=profile-mcp 且于 Cursor 设置中手动启用本 skill 时使用；需配合 mcp-switch。
+  不用于 dataAccess=dbx-mcp（改用 mcp-dbx）、与 mcp-db 互斥的 dbx 模式、或未配置 mcp-switch 时。
 disable-model-invocation: true
 ---
 

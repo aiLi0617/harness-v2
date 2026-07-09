@@ -1,3 +1,11 @@
+---
+name: hld-to-feishu
+description: >-
+  将 hld.md 发布到飞书云文档，展示 HLD 审阅清单，并记录 feishu-doc-links.md。
+  在概要设计通过一致性审查后需架构师/技术负责人人工确认时使用。
+  不用于 hld.md 未产出或未过审、无 feishu-mcp/lark 能力、或仅需本地 md 不需云文档时。
+---
+
 # 概要设计发布到飞书
 
 > 将概要设计（HLD）发布到飞书云文档，供架构师/技术负责人审阅确认。确认通过后进入 DDL/API 设计阶段，否则回退修改。

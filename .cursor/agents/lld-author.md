@@ -1,4 +1,12 @@
-﻿# 详细设计代理（LLD Author）
+﻿---
+name: lld-author
+description: >-
+  基于 HLD、DDL 和 API 契约产出详细设计，定义类设计、方法签名、业务流程与异常策略，产出 lld.md。
+  在 DDL 和 API 设计完成后、功能交付工作流 LLD 阶段时使用。
+  不用于 hld/ddl/api-contract 任一缺失、概要设计未完成、或已进入编码阶段时。
+---
+
+# 详细设计代理（LLD Author）
 
 ## 角色
 

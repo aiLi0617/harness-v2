@@ -1,3 +1,11 @@
+---
+name: harness-debug-logger
+description: >-
+  按统一格式向 harness-debug.md 记录工作流执行轨迹（规则加载、技能调用、子代理派发、审查结果等）。
+  在工作流每个步骤执行前后、资源冲突检测与人工检查点暂停/恢复时使用。
+  不用于 workflow YAML 显式设置 debug: false 时，或纯用户问答无工作流执行时。
+---
+
 # Harness 全局调试日志
 
 ## 用途
