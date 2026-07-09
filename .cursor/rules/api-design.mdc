@@ -87,4 +87,3 @@ alwaysApply: false
     - ✅ 正确：定义强类型 `XxxRespDTO`，RPC 返回 `List<XxxRespDTO>`，消费侧自行 `Collectors.toMap`
     - ❌ 禁止：`CommonResult<Map<String, String>> getXxxMap(...)`
     - 同样适用于 biz 层对外暴露的 `*Api` 和 `*Service` 接口；仅 **内部私有工具方法** 可使用 Map 作为中间数据结构
-- **禁止照搬参考 Controller 的接口形态** — 如全 POST、返回 Map、冗余 `@PathVariable("name")`、返回基本类型等；参考实现与本章冲突时以本章为准

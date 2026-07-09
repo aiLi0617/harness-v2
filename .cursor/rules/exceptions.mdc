@@ -50,7 +50,3 @@ BaseException (RuntimeException)
 - **分层异常处理** — DAO 层 `catch(Exception)` 转为 `DAOException` 向上抛不打日志；Service 层必须记录日志；Web 层不再向上抛，转为友好错误页面；开放接口层转为统一 `ErrorCode` 常量抛出
 - **【推荐】区分 unchecked/checked** — 禁止直接 `throw new RuntimeException()` 或裸 `Exception`/`Throwable`；使用有业务含义的自定义异常（如 `ServiceException`）
 - **【参考】跨应用 RPC 优先 Result**（isSuccess + 错误码 + 简短信息）；应用内部推荐抛异常
-
-## 补充规则
-
-- **禁止照搬同模块参考类的异常处理方式** — 如空 catch、`catch (Exception)` 吞异常、`e.printStackTrace()`、用异常做流程分支等；参考实现与本章冲突时以本章为准

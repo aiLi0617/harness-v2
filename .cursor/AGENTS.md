@@ -25,6 +25,7 @@
 3. **仓库即真理来源**：一切规范、决策、状态都以文件形式存在于仓库中，不依赖对话记忆
 4. **机械化执行约束**：遵守 `rules/` 中的规则文件，不要依赖口头指示
 5. **全局调试日志**：除非 workflow YAML 显式设置 `debug: false`，每个步骤必须调用 `harness-debug-logger` 技能记录执行轨迹
+6. **规则优先于参考实现**：Java 编码以 `.cursor/rules/` 已加载规范为准；同模块已有代码不是规范来源，仅允许参考分层位置与命名风格。详见 `change-implementation` 规则与 `java-edit-self-check` 门禁
 
 ## 三个工作流（渐进包含）
 

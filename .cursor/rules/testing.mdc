@@ -143,7 +143,6 @@ void should_calculate_total_when_items_provided() {
 - 禁止 `Thread.sleep` 等待异步结果
 - 禁止硬编码环境相关配置（IP、端口）
 - 禁止空断言（仅验证不抛异常不算有效测试）
-- 禁止整段复制参考测试类后只改类名 — 断言须覆盖当前被测方法的独立分支
 - 禁止 PowerMock（除非经评审的极端场景）
 
 ## 数据库相关测试

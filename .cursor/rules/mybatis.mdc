@@ -99,5 +99,4 @@ alwaysApply: false
 ## 补充规则
 
 - 编写 Mapper/SQL 前须 Read 对应 `*DO.java` 确认物理字段是否存在、类型与所在表
-- **禁止因同模块其他 Mapper 已有写法而照搬**（如 `<sql>`/`<include>` 拆 WHERE、HashMap 接结果等）——须按本章规则独立编写，参考文件与 rules 冲突时以 rules 为准
 - `in` 条件集合元素控制在 **1000** 以内；超过须分批或改查询方式
