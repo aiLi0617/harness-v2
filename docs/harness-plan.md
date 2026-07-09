@@ -40,7 +40,8 @@ flowchart LR
     feature-delivery.yaml          功能交付流水线（编排索引，entry_mode: flexible）
     feature-delivery/              功能交付的 8 个最小阶段文件 phase-1-prd-split..phase-8-verify-archive
   scripts/                       ← 校验/初始化脚本（check-rule-cross-refs.ps1 / .sh 等）
-  mcp/mcp-template.json          ← MCP 服务配置模板
+  skills/mcp-switch/             ← MCP 注册表与环境配置（mcp-registry.json、mcp.workspace.json）
+  skills/mcp-install/            ← MCP 初始化脚本（init-mcp → 生成 ~/.cursor/mcp.json）
   plugins/feature-list.md        ← 第三方插件安装清单
 
 AGENTS.md                        ← 顶层代理指令

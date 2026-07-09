@@ -45,20 +45,22 @@ AI 模型有四个固有缺陷：
 .cursor/
   AGENTS.md                ← 顶层代理指令（架构概述 + 三工作流总览）
   CLAUDE.md                ← LLM 通用行为准则（精简版）
-  mcp/                     ← MCP 服务管理
-    mcp-template.json        MCP 配置模板（不含密钥，复制为 .cursor/mcp.json 后填入）
+  skills/mcp-switch/       ← MCP 注册表与环境配置（mcp-registry.json、mcp.workspace.json、secrets）
+  skills/mcp-install/      ← MCP 初始化脚本（init-mcp → 生成 ~/.cursor/mcp.json）
   scripts/                 ← 校验脚本（check-rule-cross-refs.ps1 / .sh；init-codegraph.ps1 / .sh）
-  rules/                   ← 被动规则，自动加载（约 45 条，全部扁平化直接挂在 rules/ 下）
+  rules/                   ← 被动规则，自动加载（49 条，全部扁平化直接挂在 rules/ 下）
                              编码规范类（约 28 条）：命名/异常/日志/空值/方法/注释/集合/并发/日期/POJO/依赖/API/数据库/测试/项目架构/微服务/多租户/MCP/Redis/MQ/ORM/安全/控制流/代码格式/OBS/ER 图等
                              工作流编排类（约 6 条）：Git 分支/Git 提交/变更实施/任务拆解/阶段契约/规则加载器
                              门禁守卫类（约 9 条）：编译/Lint/测试/变更范围/Schema/纠正检测/人工检查点/Java 编辑自检/规则交叉引用
                              安全边界类（2 条）：操作红线/环境边界
     projects/<project>/        项目特化规则（按需创建；文件名带 <project>- 前缀，frontmatter 必须有 globs 锁回所属项目；详见 rules-loader.mdc）
-  skills/                  ← 主动技能，按需调用（共 13 个，全部扁平化直接挂在 skills/<skill-name>/SKILL.md）
+                             当前已内置：projects/broker/（13 条）
+  skills/                  ← 主动技能，按需调用（共 16 个，全部扁平化直接挂在 skills/<skill-name>/SKILL.md）
                              共享类：harness-debug-logger/done-verify/git-worktree/codegen-guard
                              bugfix 场景：systematic-debug/tdd-bugfix
                              refactoring 场景：refactor-plan/safe-refactoring
                              feature 场景：brainstorming/writing-plans/feature-delivery-workflow/hld-to-feishu/lld-to-feishu
+                             MCP 基础设施：mcp-switch/mcp-db/mcp-dbx
     projects/<project>/<skill-name>/SKILL.md   项目特化技能（按需创建；SKILL.md 描述首句声明仅适用于该项目）
   agents/                  ← 子代理，工作流调度（共 16 个，全部扁平化直接挂在 agents/<agent-name>.md）
                              共享类（4）：implementer/code-reviewer/memory-consolidator/consistency-reviewer
@@ -66,10 +68,10 @@ AI 模型有四个固有缺陷：
                              refactoring 场景（2）：refactoring-planner/code-quality-reviewer
                              feature 场景（7）：prd-splitter/architect-hld/db-ddl/api-contract/lld-author/impl-planner/spec-reviewer
     projects/<project>/<agent-name>.md         项目特化代理（按需创建；仅由该项目对应的 workflow YAML 引用）
-  workflows/               ← 工作流 YAML（共 3 个，渐进包含）
+  workflows/               ← 工作流 YAML（3 个主流程 + 8 个阶段文件，渐进包含）
     bugfix.yaml              Bug 修复（最小集）
     refactoring.yaml         代码重构（在 Bug 修复基础上扩展）
-    feature-delivery.yaml    PRD→交付（完整流水线）
+    feature-delivery.yaml    PRD→交付（完整流水线；编排 8 个 phase-*.yaml）
 docs/
   templates/               ← 模板与清单
     review-checklist.md      AI 产出人工审查清单
@@ -78,7 +80,7 @@ docs/
     debug-log-template.md    调试日志模板
   artifacts/               ← 子代理间的制品交接目录
     archive/                 历史制品归档
-link-cursor-config.ps1     ← Windows：将 .cursor/ 软链到目标业务项目
+link-cursor-config.ps1     ← Windows：软链 Harness 配置 + 复制 MCP 工作区到业务项目
 link-cursor-config.sh      ← macOS/Linux：同上
 ```
 
@@ -461,8 +463,14 @@ flowchart LR
 2. 在目标业务项目根目录执行链接脚本：
    - Windows：`powershell -File <harness-path>\link-cursor-config.ps1 <业务项目路径>`
    - macOS/Linux：`bash <harness-path>/link-cursor-config.sh <业务项目路径>`（无需事先 `chmod +x`；脚本会自修复 harness 内 `.sh` 可执行权限）
-3. 链接脚本会把 `.cursor/rules`、`.cursor/skills`、`.cursor/agents`、`.cursor/workflows`、`.cursor/scripts` 以 symlink 方式挂到业务项目下，并**复制** `mcp/mcp-template.json` 到目标项目
-4. 复制 `.cursor/mcp/mcp-template.json` 为 `.cursor/mcp.json`，填入实际密钥（`.cursor/mcp.json` 已被 gitignore 忽略）
+3. 链接脚本会把 `.cursor/rules`、`.cursor/skills`、`.cursor/agents`、`.cursor/workflows`、`.cursor/scripts` 以 symlink 挂到业务项目，并将 MCP 工作区配置**复制**到 `.cursor/mcp-workspace/`
+4. 配置 MCP：
+   - 编辑 `.cursor/mcp-workspace/mcp.workspace.json`（`projects.local.path`、profile servers 等）
+   - 编辑 `.cursor/mcp-workspace/mcp.workspace.secrets.json`（密钥）
+   - Windows：`powershell -File .cursor/skills/mcp-install/scripts/init-mcp.ps1 -Profile dev`
+   - macOS/Linux：`bash .cursor/skills/mcp-install/scripts/init-mcp.sh --profile dev`
+   - 日常切换环境：`switch-all-mcp-profiles.ps1 dev|sit|pre`（见 `skills/mcp-switch/SKILL.md`）
+   - 生成结果写入 `~/.cursor/mcp.json`；项目级 `.cursor/mcp.json` 已被 gitignore 忽略
 5. （可选）初始化 CodeGraph 索引（配合 `codegraph-mcp`）：
    - Windows：`powershell -File <harness-path>\.cursor\scripts\init-codegraph.ps1 -ProjectPath <业务项目路径>`
    - macOS/Linux：`bash <harness-path>/.cursor/scripts/init-codegraph.sh <业务项目路径>`
@@ -483,7 +491,7 @@ flowchart LR
 | 规则交叉引用检查 | Windows: `.cursor/scripts/check-rule-cross-refs.ps1`；macOS/Linux: `bash .cursor/scripts/check-rule-cross-refs.sh`（或链接后 `./…`，见 `cross-ref-guard.mdc`） |
 | 新增技能 | `skills/<技能名>/SKILL.md`（已扁平化，无工作流子目录） |
 | 新增子代理 | `agents/<代理名>.md`（已扁平化，无工作流子目录） |
-| 新增 MCP | 在 `.cursor/mcp/mcp-template.json` 中添加配置，在 `rules/mcp.mdc` 注册 |
+| 新增 MCP | 在 `skills/mcp-switch/mcp-registry.json` 注册 server，在 `mcp.workspace.json` 各 profile 启用，并在 `rules/mcp.mdc` 登记用途 |
 | 新增分类映射 | 同步更新三处分类表：`rules-loader.mdc`、`correction-detection.mdc`、`memory-consolidator.md` |
 | 适配新项目 | 编辑 `rules/project-architecture.mdc` 填入分层结构；不需要的规则把 `alwaysApply` 改为 `false` |
 | **新增项目特化规则** | `rules/projects/<project>/<project>-<topic>.mdc`；frontmatter 必须含非空 `globs` 锁回本项目特征路径，`alwaysApply: false`；**不**登记到任何场景/分类映射表（详见 `rules-loader.mdc` 「项目特化规则加载约定」） |
@@ -518,4 +526,4 @@ flowchart LR
 
 ---
 
-⚙️ 当前版本：v2（三工作流渐进体系） | 📦 资源数：33 rules + 13 skills + 15 agents + 3 workflows + 8 MCP
+⚙️ 当前版本：v2（三工作流渐进体系） | 📦 资源数：49 rules + 13 broker-rules + 16 skills + 16 agents + 3 workflows + 11 MCP

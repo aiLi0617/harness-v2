@@ -55,14 +55,22 @@ alwaysApply: false
 
 1. **停止当前操作**，不要猜测或跳过
 2. 向用户报告缺失的 MCP 名称
-3. 提示用户检查 `.cursor/mcp.json` 是否已从模板配置
+3. 提示用户检查 `mcp.workspace.json` / `mcp.workspace.secrets.json` 并重新执行 `init-mcp` 或 `switch-all-mcp-profiles`
 4. 等待用户确认后再继续
 
 ## 配置说明
 
-MCP 配置模板位于 `.cursor/mcp/mcp-template.json`，使用流程：
+MCP 由 **mcp-switch** 技能体系管理：
 
-1. 复制 `.cursor/mcp/mcp-template.json` 为 `.cursor/mcp.json`
-2. 将 `<PLACEHOLDER>` 替换为实际密钥/地址
-3. 按需增删环境 MCP（如复制 `dev-mysql-mcp` 为 `sit-mysql-mcp`）
-4. `.cursor/mcp.json` 已被 `.gitignore` 忽略，不会提交密钥
+| 文件 | 作用 |
+|------|------|
+| `skills/mcp-switch/mcp-registry.json` | MCP 服务启动模板（一般不改） |
+| 业务项目 `.cursor/mcp-workspace/mcp.workspace.json` | 环境、项目 path、profile servers（`link-cursor-config` 复制初始化） |
+| 业务项目 `.cursor/mcp-workspace/mcp.workspace.secrets.json` | 密钥（从 example 复制，勿提交 Git） |
+
+使用流程：
+
+1. 链接 harness 后，编辑 `.cursor/mcp-workspace/mcp.workspace.json`（`projects.local.path` 等）
+2. 在 `.cursor/mcp-workspace/mcp.workspace.secrets.json` 填入密钥
+3. 执行 `skills/mcp-install/scripts/init-mcp.ps1 -Profile dev`（或 `switch-all-mcp-profiles.ps1 dev`）
+4. 生成结果写入 `~/.cursor/mcp.json`；项目级 `.cursor/mcp.json` 已被 `.gitignore` 忽略

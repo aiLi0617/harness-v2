@@ -1,7 +1,7 @@
 ﻿# 第三方插件安装清单
 
 > Harness 接入业务项目后，按需安装下列 **Cursor / Agent 第三方插件**。
-> 与 Harness 内置 MCP 模板（`.cursor/mcp/mcp-template.json`）相互独立；MCP 密钥类服务见 README「接入业务项目」。
+> 与 Harness 内置 MCP 体系（`skills/mcp-switch/` + `skills/mcp-install/`）相互独立；MCP 密钥类服务见 README「接入业务项目」。
 
 ---
 
@@ -50,7 +50,7 @@ bash <harness-path>/.cursor/scripts/init-loki-mcp.sh --loki-url http://192.168.3
 在安装任一插件前，确认已完成：
 
 - [ ] 已 clone `harness-v2`，并对目标业务项目执行 `link-cursor-config.ps1` / `.sh`
-- [ ] 已将 `.cursor/mcp/mcp-template.json` 复制为 `.cursor/mcp.json`，并填入实际密钥
+- [ ] 已配置 `.cursor/mcp-workspace/mcp.workspace.json` / `mcp.workspace.secrets.json` 并执行 `init-mcp`（或 `switch-all-mcp-profiles`）
 - [ ] 本机已安装 **Node.js**（含 `npx`）；CodeGraph 亦可使用官方独立安装包（见 P-02）
 - [ ] 安装 Loki MCP 时需 **Docker Desktop**（推荐）或 **Go 1.16+**（见 P-03）
 - [ ] 已在 Cursor 中**打开业务项目**作为工作区（非 harness 配置仓本身）
@@ -119,7 +119,7 @@ npx @larksuite/cli@latest install
 ### 安装前
 
 - [ ] 已在**业务 Java 项目**（含源码）根目录执行本清单，而非仅在 harness-v2 配置仓
-- [ ] 项目 `.cursor/mcp.json` 已存在（来自 mcp-template）；脚本会自动合并 `codegraph-mcp` 段
+- [ ] 已执行 `init-mcp` 或 `switch-all-mcp-profiles` 生成 MCP 配置；脚本会自动合并 `codegraph-mcp` 段
 - [ ] 了解 `.codegraph/` 为本地索引目录，**勿提交 Git**（业务项目 `.gitignore` 建议加入 `.codegraph/`）
 
 ### 安装
@@ -248,7 +248,7 @@ cd $env:TEMP\loki-mcp
 go build -o "$env:LOCALAPPDATA\loki-mcp\loki-mcp-server.exe" ./cmd/server
 ```
 
-再将 `mcp-template.json` 中 `loki-mcp` 段复制到 `~/.cursor/mcp.json`（或项目 `.cursor/mcp.json`），替换 `<YOUR_LOKI_URL>`；binary 模式时将 `command` 改为上述二进制绝对路径。
+或在 `.cursor/mcp-workspace/mcp.workspace.json` 的 profile `env` 中设置 `LOKI_URL`，再执行 `init-mcp` / `switch-all-mcp-profiles` 重新生成 `~/.cursor/mcp.json`；binary 模式时在 `tools.LOKI_MCP_BIN` 填入上述二进制绝对路径。
 
 ### 安装后
 
