@@ -6,7 +6,7 @@
 
 为每个工作流的每个步骤提供统一的日志格式，在步骤执行前后自动追加结构化条目，形成可回溯的执行轨迹。这是全局技能：除非 workflow YAML 显式 `debug: false`，每个步骤都应调用。
 
-- 输出文件：**`docs/artifacts/harness-debug.md`**
+- 输出文件：**`{artifact_root}/workflow/harness-debug.md`**
 - 通过 workflow YAML 中 `debug: true/false` 控制，默认启用
 
 ## 适用场景

@@ -1,12 +1,21 @@
 ---
-description: 测试门禁
-globs: 
+description: 测试门禁；在所有 Agent 任务执行时持续生效
+globs:
 alwaysApply: true
 ---
 
 # 测试门禁
 
-## 规则
+## 适用范围
+
+- 适用于所有 Agent 任务，作为持续生效的工程约束。
+
+## 强制规则
+
+- 单元测试套件执行时间目标 ≤ 3 分钟；明显超时须排查慢测试或并行配置
+- Flaky Test 零容忍：随机失败须立即根因修复，不得合并
+
+### 规则
 
 - **已有测试全部通过才能提交** — 任何测试失败必须立即修复
 - **新增功能必须有对应测试** — 无测试的功能代码不允许提交
@@ -14,7 +23,7 @@ alwaysApply: true
 - **覆盖率不低于基线** — 已接入 JaCoCo check 的项目，行覆盖 ≥ 78%、分支覆盖 ≥ 65%
 - **禁止绕过覆盖率检查** — 不得通过 `-Djacoco.skip=true` 等方式跳过门禁（经用户明确批准的临时例外除外）
 
-## 触发条件
+### 触发条件
 
 满足任一条件时，必须执行本门禁：
 
@@ -24,14 +33,14 @@ alwaysApply: true
 
 仅变更文档、规则、配置模板且未触达上述路径时，可跳过本门禁。
 
-## 执行方式
+### 执行方式
 
-### 1. 确定被测模块
+#### 1. 确定被测模块
 
 - 单模块变更：在该模块目录执行
 - 多模块变更：对每个涉及模块分别执行，或在其共同父 POM 目录执行 `-pl mod1,mod2 -am`
 
-### 2. 选择命令
+#### 2. 选择命令
 
 | 项目状态 | Maven 命令 | Gradle 命令 |
 |---|---|---|
@@ -41,19 +50,19 @@ alwaysApply: true
 
 已接入 JaCoCo 时**禁止**仅用 `mvn test` 代替 `mvn verify` — `test` 阶段不执行覆盖率 check。
 
-### 3. 覆盖率报告位置
+#### 3. 覆盖率报告位置
 
 - Maven JaCoCo HTML：`target/site/jacoco/index.html`
 - 构建失败时优先查看 `[ERROR] Rule violated for bundle` 行
 
-### 4. 业务项目 Maven 接入
+#### 4. 业务项目 Maven 接入
 
 业务项目（broker / b2cmall 等）须在 BOM（如 `broker-dependencies/pom.xml`）接入 JaCoCo + Surefire 模板：
 
 - 模板片段：`docs/templates/maven-jacoco-surefire.xml`
 - 接入步骤：`docs/templates/maven-test-coverage-integration.md`
 
-## 质量门禁（ERROR 级）
+### 质量门禁（ERROR 级）
 
 | 门禁项 | 阈值 |
 |---|---|
@@ -62,7 +71,7 @@ alwaysApply: true
 | 分支覆盖率 | ≥ 65% |
 | 新增代码覆盖率 | ≥ 70%（需 SonarQube / diff 覆盖率；本地以模块整体覆盖率为准） |
 
-## 测试失败处理
+### 测试失败处理
 
 1. 阅读失败测试的断言信息或 JaCoCo 未覆盖行
 2. 判断是代码 bug、测试缺失还是测试需更新
@@ -70,7 +79,7 @@ alwaysApply: true
 4. 重新执行 `mvn verify`（或等效命令）确认通过
 5. 确认通过后再提交
 
-## 新增代码测试检查
+### 新增代码测试检查
 
 变更 `src/main/java` 时，须确认：
 
@@ -78,7 +87,8 @@ alwaysApply: true
 - [ ] 正常路径与主要异常/边界分支有断言
 - [ ] 未使用 `@Disabled` 掩盖失败
 
-## 补充规则
+## 验证清单
 
-- 单元测试套件执行时间目标 ≤ 3 分钟；明显超时须排查慢测试或并行配置
-- Flaky Test 零容忍：随机失败须立即根因修复，不得合并
+- 确认本规则适用范围内的强制约束均已落实。
+- 确认没有出现本规则明确禁止的行为。
+- 确认代码、配置或制品与本规则中的示例和领域约定一致。

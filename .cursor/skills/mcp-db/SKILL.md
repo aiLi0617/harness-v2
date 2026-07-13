@@ -26,11 +26,11 @@ disable-model-invocation: true
 
 ```powershell
 # 只装 MySQL profile MCP
-.cursor/skills/shared/mcp-install/scripts/bootstrap-mcp.ps1 -Servers mysql-mcp -NonInteractive
+.cursor/skills/mcp-install/scripts/init-mcp.ps1 -Servers mysql-mcp
 
 # 常用：日志 + 库
-.cursor/skills/shared/mcp-install/scripts/bootstrap-mcp.ps1 `
-  -Servers loki-mcp,mysql-mcp,redis-mcp -NonInteractive
+.cursor/skills/mcp-install/scripts/init-mcp.ps1 `
+  -Servers loki-mcp,mysql-mcp,redis-mcp
 ```
 
 **不要**与 `dbx` 同选；若同选，安装脚本会剔除 mysql/redis/es 并启用 dbx 模式。
@@ -94,7 +94,7 @@ disable-model-invocation: true
 
 ## 相关
 
-- 安装编排：[mcp-install](../mcp-install/SKILL.md)
+- 安装编排：`mcp-install/scripts/init-mcp.*`
 - DBX MCP（互斥）：[mcp-dbx](../mcp-dbx/SKILL.md)
 - 环境切换：[mcp-switch](../mcp-switch/SKILL.md)
 - 路由规则：`.cursor/rules/memory/data-access-backend.mdc`

@@ -14,8 +14,8 @@
 
 | 制品 | 路径 | 必须 |
 |------|------|------|
-| 概要设计 | `docs/artifacts/hld.md` | 是 |
-| 飞书文档链接记录 | `docs/artifacts/feishu-doc-links.md` | 否（重新发布时读取） |
+| 概要设计 | `{artifact_root}/design/hld.md` | 是 |
+| 飞书文档链接记录 | `{artifact_root}/delivery/publication-links.md` | 否（重新发布时读取） |
 
 ## 执行流程
 
@@ -24,16 +24,16 @@
 2. 发布到飞书   → 首次创建并记录 URL；重发则更新同一文档并追加修改说明
 3. 展示审阅清单 → 功能覆盖 / 模块边界 / 接口概览 / 数据流 / 技术选型 / 非功能 / 无过度设计
 4. 等待人工确认 → 阻塞
-5. 处理响应     → 确认→进入 DDL/API；修改→回退 architect-hld 后重发
+5. 处理响应     → 确认→进入 DDL/API；修改→回退 solution-architect 后重发
 ```
 
 ## 产出物
 
 | 产出 | 路径 |
 |------|------|
-| 飞书文档链接记录 | `docs/artifacts/feishu-doc-links.md` |
-| 决策记录 | `docs/artifacts/decision-log.md` |
-| harness 日志 | `docs/artifacts/harness-debug.md` |
+| 飞书文档链接记录 | `{artifact_root}/delivery/publication-links.md` |
+| 决策记录 | `{artifact_root}/workflow/decision-log.md` |
+| harness 日志 | `{artifact_root}/workflow/harness-debug.md` |
 
 ## 关键约束
 
@@ -48,4 +48,4 @@
 |------|------|
 | `feishu-mcp` | 飞书云文档发布所需 MCP（见 `mcp.mdc`） |
 | [`lld-to-feishu`](../lld-to-feishu/SKILL.md) | LLD 阶段的对应发布技能 |
-| `architect-hld` | 修改回退的目标代理 |
+| `solution-architect` | 修改回退的目标代理 |

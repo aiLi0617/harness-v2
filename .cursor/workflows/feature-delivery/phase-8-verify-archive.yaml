@@ -1,27 +1,20 @@
-# feature-delivery 工作流 · 阶段 8：最终验证 → 制品归档
-# 由 feature-delivery-workflow SKILL 按 feature-delivery.yaml 的 phases 顺序编排执行。
-# Cursor IDE 不自动解析此 YAML。rules / agents / global_skills 继承 feature-delivery.yaml。
-name: feature-delivery/phase-8-verify-archive
-description: 完成前验证并归档全部制品
-phase: 8
-entry_artifacts:
-  - 源代码与全部 docs/artifacts/ 制品
-exit_artifacts:
-  - docs/artifacts/verification-report.md
-  - docs/artifacts/archive/{date}-{task}/
-prev_phase: feature-delivery/phase-7-code
-
+id: verify-archive
+description: 最终验证并整体归档任务制品
+execution: {mode: sequential, join: all}
 steps:
-  - name: verify
-    description: 最终验证
-    skill: skills/done-verify
-    actions:
-      - 编译通过
-      - 测试全绿
-      - Lint 干净
-      - diff 只包含需求相关改动
-
-  - name: archive
-    description: 制品归档
-    actions:
-      - 归档 docs/artifacts/ 到 archive/{date}-{task}/
+  - id: final-verification
+    description: 门禁通过后执行最终机械验证
+    agent: null
+    skills: {required: [skills/done-verify], on_demand: []}
+    entry_artifacts: {required: [delivery/change-manifest.md, quality/gates/implementation/quality-gate.md], optional: []}
+    exit_artifacts: [quality/verification-report.md]
+    condition: quality-gate 最后结论为 PASS
+    next: {on_pass: archive, on_fail: implementation}
+  - id: archive
+    description: 整体移动任务目录到历史归档
+    agent: null
+    skills: {required: [], on_demand: []}
+    entry_artifacts: {required: [delivery/change-manifest.md, quality/gates/implementation/quality-gate.md, quality/verification-report.md, workflow/workflow-state.md], optional: []}
+    exit_artifacts: [archive/{date}-{task-id}/]
+    condition: 最终验证 PASS
+    next: {on_pass: end, on_fail: human-checkpoint}

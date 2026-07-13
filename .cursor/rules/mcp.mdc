@@ -1,12 +1,18 @@
-﻿---
-description: MCP 服务命名与引用规范
+---
+description: MCP 服务命名与引用规范；在处理匹配文件或相关任务时使用
 globs: ".cursor/agents/**/*.md,.cursor/skills/**/*.md"
 alwaysApply: false
 ---
 
 # MCP 服务规范
 
-## 命名规范
+## 适用范围
+
+- 当引用、读取或修改匹配 `.cursor/agents/**/*.md,.cursor/skills/**/*.md` 的文件，或任务语义明确涉及本规则领域时适用。
+
+## 强制规则
+
+### 命名规范
 
 所有 MCP 服务名必须带 `-mcp` 后缀，与 CLI 工具（如 `lark-cli`）区分。
 
@@ -15,27 +21,27 @@ alwaysApply: false
 
 服务名 = 项目级 `.cursor/mcp.json` 中的 key，**无** `user-` 前缀。
 
-## MCP 注册表
+### MCP 注册表
 
-### 通用 MCP
+#### 通用 MCP
 
 | 服务名 | 用途 | 使用方 | 所属工作流 |
 |--------|------|--------|-----------|
-| `ones-mcp` | ONES 缺陷管理（查询/更新缺陷） | `agents/ones-issue-fetcher`、`agents/bug-analyst`（可选） | bugfix |
+| `ones-mcp` | ONES 缺陷管理（查询/更新缺陷） | `agents/issue-context-fetcher`、`agents/problem-analyst`（可选） | bugfix |
 | `feishu-mcp` | 飞书 API（云文档发布、消息通知） | `skills/hld-to-feishu`、`skills/lld-to-feishu` | feature-delivery |
 | `playwright-mcp` | 浏览器自动化（页面操作、快照、截图） | 按需 | 通用 |
 | `codegraph-mcp` | 本地代码知识图谱（符号搜索/调用链/影响分析） | 按需 | 通用 |
-| `loki-mcp` | Loki 日志查询（LogQL） | `agents/loki-log-investigator` | bugfix |
+| `loki-mcp` | Loki 日志查询（LogQL） | `agents/log-investigator` | bugfix |
 
-### 环境 MCP（模板中用 `dev-` 示例，按实际环境调整）
+#### 环境 MCP（模板中用 `dev-` 示例，按实际环境调整）
 
 | 服务名模式 | 用途 | 使用方 | 所属工作流 |
 |-----------|------|--------|-----------|
-| `{env}-mysql-mcp` | 数据库访问（查询/DDL） | `agents/implementer`、`agents/db-ddl` | 全部（涉及 DB 时） |
-| `{env}-swagger-mcp` | Apifox API 文档查询 | `agents/api-contract`、`agents/implementer` | feature-delivery |
+| `{env}-mysql-mcp` | 数据库访问（查询/DDL） | `agents/implementer`、`agents/database-designer` | 全部（涉及 DB 时） |
+| `{env}-swagger-mcp` | Apifox API 文档查询 | `agents/api-designer`、`agents/implementer` | feature-delivery |
 | `{env}-nacos-mcp` | Nacos 服务注册/配置查询 | 按需 | 通用 |
 
-## 各工作流必需 MCP
+### 各工作流必需 MCP
 
 | 工作流 | 必需 | 可选 |
 |--------|------|------|
@@ -43,7 +49,7 @@ alwaysApply: false
 | refactoring | — | `codegraph-mcp`、`{env}-mysql-mcp` |
 | feature-delivery | `feishu-mcp`（飞书发布时） | `codegraph-mcp`、`{env}-mysql-mcp`、`{env}-swagger-mcp` |
 
-## 代理引用规范
+### 代理引用规范
 
 在 agent `.md` 或 skill `SKILL.md` 中引用 MCP 时：
 
@@ -51,14 +57,14 @@ alwaysApply: false
 - **禁止**使用大写（`ONES`）、`user-` 前缀（`user-ones`）或不带 `-mcp` 后缀的名称
 - 环境 MCP 在代理文档中写模式（`{env}-mysql-mcp`），实际调用时按当前项目配置确定具体名称
 
-## MCP 不可用时的处理
+### MCP 不可用时的处理
 
 1. **停止当前操作**，不要猜测或跳过
 2. 向用户报告缺失的 MCP 名称
 3. 提示用户检查 `mcp.workspace.json` / `mcp.workspace.secrets.json` 并重新执行 `init-mcp` 或 `switch-all-mcp-profiles`
 4. 等待用户确认后再继续
 
-## 配置说明
+### 配置说明
 
 MCP 由 **mcp-switch** 技能体系管理：
 
@@ -74,3 +80,9 @@ MCP 由 **mcp-switch** 技能体系管理：
 2. 在 `.cursor/mcp-workspace/mcp.workspace.secrets.json` 填入密钥
 3. 执行 `skills/mcp-install/scripts/init-mcp.ps1 -Profile dev`（或 `switch-all-mcp-profiles.ps1 dev`）
 4. 生成结果写入 `~/.cursor/mcp.json`；项目级 `.cursor/mcp.json` 已被 `.gitignore` 忽略
+
+## 验证清单
+
+- 确认本规则适用范围内的强制约束均已落实。
+- 确认没有出现本规则明确禁止的行为。
+- 确认代码、配置或制品与本规则中的示例和领域约定一致。

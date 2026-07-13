@@ -1,12 +1,20 @@
 ---
-description: Java 命名约定
+description: Java 命名约定；在处理匹配文件或相关任务时使用
 globs: "**/*.java"
 alwaysApply: false
 ---
 
 # 命名约定
 
-## 基本规则
+## 适用范围
+
+- 当引用、读取或修改匹配 `**/*.java` 的文件，或任务语义明确涉及本规则领域时适用。
+
+## 强制规则
+
+- ⚠️ 禁止在代码中使用全限定类名（如 `com.broker.orch.businessfrontend.controller.admin.order.vo.resp.OrderSubmitRespVO`）——必须在文件头部添加 `import` 语句，方法签名、变量声明、泛型参数等一律使用短类名；仅当同包下存在同名类冲突时才允许全限定，且需加注释说明原因
+
+### 基本规则
 
 - **禁止以下划线或美元符号开始/结束命名** — 如 `_name`、`name$`
 - **禁止拼音与英文混合、禁止中文命名** — 国际通用名称（如 alibaba、taobao）可视同英文
@@ -18,12 +26,12 @@ alwaysApply: false
 - **变量名** — camelCase，语义明确，禁止单字母（循环变量除外）
 - **数组定义** — 类型与中括号紧挨：`int[] arrayDemo`，禁止 `String args[]`
 
-## 布尔变量
+### 布尔变量
 
 - 方法返回布尔值或布尔局部变量可使用 `is`/`has`/`can`/`should` 前缀
 - **⚠️ POJO 类属性禁止加 `is` 前缀** — 如 `private Boolean deleted` 而非 `private Boolean isDeleted`，否则部分框架（Jackson、MyBatis 等）反序列化时解析错误
 
-## 特定后缀约定
+### 特定后缀约定
 
 | 类型 | 后缀 | 示例 |
 |------|------|------|
@@ -40,7 +48,7 @@ alwaysApply: false
 | 异常类 | Exception 结尾 | OrderNotFoundException |
 | 测试类 | 被测类名 + Test | OrderServiceTest |
 
-## AI 易忽略的命名规则
+### AI 易忽略的命名规则
 
 - **禁止拼音与英文混合命名** — 如 `DaZhePromotion`（打折）、`getPingfenByName()`（评分）
 - **杜绝不规范缩写** — 如 `AbsClass`（AbstractClass）、`condi`（condition），降低可读性
@@ -51,6 +59,8 @@ alwaysApply: false
 - **避免子父类成员变量同名** — 即使编译通过也会降低可理解性
 - **接口方法不加修饰符** — 接口中方法签名直接写 `void commit()`，不加 `public abstract`
 
-## 补充规则
+## 验证清单
 
-- ⚠️ 禁止在代码中使用全限定类名（如 `com.broker.orch.businessfrontend.controller.admin.order.vo.resp.OrderSubmitRespVO`）——必须在文件头部添加 `import` 语句，方法签名、变量声明、泛型参数等一律使用短类名；仅当同包下存在同名类冲突时才允许全限定，且需加注释说明原因
+- 确认本规则适用范围内的强制约束均已落实。
+- 确认没有出现本规则明确禁止的行为。
+- 确认代码、配置或制品与本规则中的示例和领域约定一致。

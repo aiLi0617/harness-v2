@@ -22,7 +22,7 @@ description: >-
 - 人工检查点（暂停/恢复）
 
 ## 输出文件
-`docs/artifacts/harness-debug.md`
+`{artifact_root}/workflow/harness-debug.md`
 
 ## 日志条目格式
 
@@ -121,7 +121,7 @@ description: >-
 ## [YYYY-MM-DD HH:mm:ss] 人工检查点
 - **阶段**: {phase}
 - **原因**: {暂停原因}
-- **问题**: 详见 `docs/artifacts/decision-log.md` 决策 #N
+- **问题**: 详见 `{artifact_root}/workflow/decision-log.md` 决策 #N
 - **用户决策**: {摘要}
 - **状态**: 已恢复
 ```

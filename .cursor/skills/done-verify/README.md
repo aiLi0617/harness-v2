@@ -7,7 +7,7 @@
 在 AI 准备声明"已完成"之前，按固定顺序逐关验证：编译、测试、Lint、变更范围、遗留项、制品完整性、安全、规则交叉引用。**快速失败**——前序关卡未通过不执行后续关卡。本技能负责编排"何时检查、按什么顺序检查"，具体标准由 feedback 层门禁规则定义。
 
 - 由 workflow YAML 在收尾阶段强制调用，不依赖 AI 自觉
-- 验证结果写入 `docs/artifacts/verification-report.md`
+- 验证结果写入 `{artifact_root}/quality/verification-report.md`
 
 ## 适用场景
 
@@ -31,7 +31,7 @@
 
 | 文件 | 说明 |
 |------|------|
-| `docs/artifacts/verification-report.md` | 通过/未通过结论与失败项 |
+| `{artifact_root}/quality/verification-report.md` | 通过/未通过结论与失败项 |
 
 ## 关键约束
 

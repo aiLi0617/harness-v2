@@ -1,83 +1,277 @@
-﻿# 本文件为工作流参考定义，由对应的 SKILL 或人工按步骤编排执行。
-# Cursor IDE 不自动解析此 YAML。
 name: bugfix
-description: Bug 修复工作流（最小集）
+description: Bug 修复工作流
+version: 2
 debug: true
-global_skills:
-  - skills/harness-debug-logger
+entry_mode: flexible
+artifact_root: docs/artifacts/work/{task-id}
+intent_policy:
+  default_for_ones_link_only: investigation
+  investigation_keywords: [排查, 分析, 定位, 查看]
+  fix_keywords: [修复, 修改代码, 解决缺陷, 实施修复]
+  fix_requires_explicit_authorization: true
 
 steps:
-  - name: reproduce
-    description: 复现 Bug
-    skill: skills/systematic-debug
-    actions:
-      - 收集 bug 信息（日志/堆栈/复现步骤）
-      - 在本地环境复现 bug
-      - 记录复现结果
+  - id: initialize
+    description: 初始化任务目录、状态与日志
+    agent: null
+    skills:
+      required: [skills/harness-debug-logger]
+      on_demand: []
+    entry_artifacts:
+      required: []
+      optional: []
+    exit_artifacts: [workflow/workflow-state.md, workflow/harness-debug.md]
+    condition: null
+    next: {on_pass: intent-routing, on_fail: human-checkpoint}
 
-  - name: root-cause-analysis
-    description: 根因分析
-    agent: agents/bug-analyst
-    skill: skills/systematic-debug
-    actions:
-      - 形成假设列表
-      - 逐个验证假设
-      - 确认根因
-      - 输出根因分析到 docs/artifacts/root-cause.md
+  - id: intent-routing
+    description: 判断本次请求只做排查还是允许进入代码修复
+    agent: null
+    skills:
+      required: []
+      on_demand: []
+    entry_artifacts:
+      required: []
+      optional: []
+    exit_artifacts: [workflow/intent-routing.md]
+    condition: null
+    next: {on_pass: issue-context, on_fail: human-checkpoint}
 
-  - name: fix
-    description: 编写修复
-    skill: skills/tdd-bugfix
+  - id: issue-context
+    description: 规范化用户描述或获取 ONES Issue 上下文
+    agent: agents/issue-context-fetcher
+    skills:
+      required: []
+      on_demand: [skills/mcp-switch]
+    entry_artifacts:
+      required: []
+      optional: [context/prd-source.md]
+    exit_artifacts: [context/issue-context.md]
+    condition: 用户已提供问题文本或 ONES Issue
+    next: {on_pass: log-investigation, on_fail: human-checkpoint}
+
+  - id: log-investigation
+    description: 按 traceId、关键字或时间窗调查 Loki 日志
+    agent: agents/log-investigator
+    skills:
+      required: []
+      on_demand: [skills/mcp-switch]
+    entry_artifacts:
+      required: [context/issue-context.md]
+      optional: []
+    exit_artifacts: [context/log-evidence.md, analysis/log-investigation.md]
+    condition: 存在 traceId、业务关键字或明确时间窗
+    next: {on_pass: root-cause-analysis, on_skip: root-cause-analysis, on_fail: root-cause-analysis}
+
+  - id: root-cause-analysis
+    description: 确认根因、触发条件和影响范围
+    agent: agents/problem-analyst
+    skills:
+      required: [skills/systematic-debug]
+      on_demand: [skills/mcp-db, skills/mcp-dbx]
+    entry_artifacts:
+      required: [context/issue-context.md]
+      optional: [context/log-evidence.md, analysis/log-investigation.md]
+    exit_artifacts: [analysis/root-cause.md]
+    condition: null
+    next: {on_pass: fix-authorization, on_fail: human-checkpoint}
+
+  - id: fix-authorization
+    description: 仅在用户明确授权修复时继续进入代码变更阶段
+    agent: null
+    skills:
+      required: []
+      on_demand: []
+    entry_artifacts:
+      required: [workflow/intent-routing.md, analysis/root-cause.md]
+      optional: [analysis/impact-analysis.md]
+    exit_artifacts: []
+    condition: intent-routing.requested_mode 为 fix
+    next: {on_pass: implementation-plan, on_skip: investigation-complete, on_fail: human-checkpoint}
+
+  - id: investigation-complete
+    description: 只读排查完成，返回根因、影响和建议但不修改代码
+    agent: null
+    skills:
+      required: []
+      on_demand: []
+    entry_artifacts:
+      required: [workflow/intent-routing.md, context/issue-context.md, analysis/root-cause.md]
+      optional: [context/log-evidence.md, analysis/log-investigation.md, analysis/impact-analysis.md]
+    exit_artifacts: []
+    condition: intent-routing.requested_mode 为 investigation
+    next: {on_pass: end, on_fail: human-checkpoint}
+
+  - id: implementation-plan
+    description: 为复杂修复生成可执行计划
+    agent: agents/implementation-planner
+    skills:
+      required: [skills/writing-plans]
+      on_demand: []
+    entry_artifacts:
+      required: [analysis/root-cause.md]
+      optional: [analysis/impact-analysis.md]
+    exit_artifacts: [plans/implementation-plan.md]
+    condition: 修复跨多个文件、模块或存在顺序依赖
+    next: {on_pass: implementation, on_skip: implementation, on_fail: human-checkpoint}
+
+  - id: implementation
+    description: 使用失败测试锁定根因并实施最小修复
     agent: agents/implementer
-    actions:
-      - 先写失败测试复现 bug
-      - 修改代码让测试通过
-      - 运行全量回归测试
+    skills:
+      required: [skills/tdd-bugfix]
+      on_demand: [skills/codegen-guard, skills/git-worktree]
+    entry_artifacts:
+      required: [analysis/root-cause.md]
+      optional: [plans/implementation-plan.md, workflow/decision-log.md]
+    exit_artifacts: [delivery/change-manifest.md]
+    condition: null
+    next: {on_pass: evidence, on_fail: human-checkpoint}
 
-  - name: review
-    description: 代码审查
-    agent: agents/code-reviewer
+  - id: evidence
+    description: 采集编译、测试、Lint、覆盖率和扫描证据
+    agent: null
+    skills:
+      required: [skills/done-verify]
+      on_demand: []
+    entry_artifacts:
+      required: [delivery/change-manifest.md]
+      optional: []
+    exit_artifacts: [quality/evidence/implementation/compile-report.md, quality/evidence/implementation/test-report.md]
+    condition: null
+    next: {on_pass: review-routing, on_fail: implementation}
+
+  - id: review-routing
+    description: 根据变更清单、diff 和制品生成质量风险路由
+    agent: null
+    skills:
+      required: [skills/quality-review-routing]
+      on_demand: []
+    entry_artifacts:
+      required: [delivery/change-manifest.md]
+      optional: [analysis/impact-analysis.md]
+    exit_artifacts: [workflow/review-routing.md]
+    condition: null
+    next: {on_pass: implementation-quality, on_fail: human-checkpoint}
+
+  - id: static-analysis-review
+    description: 解释机械静态分析证据
+    agent: agents/static-analysis-reviewer
+    parallel_group: implementation-quality
+    skills: {required: [], on_demand: []}
+    entry_artifacts: {required: [workflow/review-routing.md], optional: []}
+    exit_artifacts: [quality/gates/implementation/static-analysis.md]
+    condition: always
+    next: {on_pass: implementation-quality.join, on_fail: implementation-quality.join, on_skip: implementation-quality.join}
+
+  - id: logic-correctness-review
+    description: 审查业务逻辑和边界正确性
+    agent: agents/logic-correctness-reviewer
+    parallel_group: implementation-quality
+    skills: {required: [], on_demand: []}
+    entry_artifacts: {required: [analysis/root-cause.md, delivery/change-manifest.md], optional: []}
+    exit_artifacts: [quality/gates/implementation/logic-correctness.md]
+    condition: always
+    next: {on_pass: implementation-quality.join, on_fail: implementation-quality.join, on_skip: implementation-quality.join}
+
+  - id: maintainability-review
+    description: 审查可维护性和结构风险
+    agent: agents/maintainability-reviewer
+    parallel_group: implementation-quality
+    skills: {required: [], on_demand: []}
+    entry_artifacts: {required: [delivery/change-manifest.md], optional: []}
+    exit_artifacts: [quality/gates/implementation/maintainability.md]
+    condition: always
+    next: {on_pass: implementation-quality.join, on_fail: implementation-quality.join, on_skip: implementation-quality.join}
+
+  - id: test-adequacy-review
+    description: 审查测试语义和回归保护
+    agent: agents/test-adequacy-reviewer
+    parallel_group: implementation-quality
+    skills: {required: [], on_demand: []}
+    entry_artifacts: {required: [analysis/root-cause.md, delivery/change-manifest.md], optional: []}
+    exit_artifacts: [quality/gates/implementation/test-adequacy.md]
+    condition: always
+    next: {on_pass: implementation-quality.join, on_fail: implementation-quality.join, on_skip: implementation-quality.join}
+
+  - id: security-review
+    description: 审查安全边界
+    agent: agents/security-reviewer
+    parallel_group: implementation-quality
+    skills: {required: [], on_demand: []}
+    entry_artifacts: {required: [workflow/review-routing.md], optional: [design/api-contract.md]}
+    exit_artifacts: [quality/gates/implementation/security.md]
+    condition: 路由命中 API、鉴权、权限、用户输入、敏感数据或依赖升级
+    next: {on_pass: implementation-quality.join, on_fail: implementation-quality.join, on_skip: implementation-quality.join}
+
+  - id: data-concurrency-review
+    description: 审查数据与并发风险
+    agent: agents/data-concurrency-reviewer
+    parallel_group: implementation-quality
+    skills: {required: [], on_demand: [skills/mcp-db, skills/mcp-dbx]}
+    entry_artifacts: {required: [workflow/review-routing.md], optional: [design/ddl.md]}
+    exit_artifacts: [quality/gates/implementation/data-concurrency.md]
+    condition: 路由命中数据库、事务、缓存、MQ、Job、异步或并发
+    next: {on_pass: implementation-quality.join, on_fail: implementation-quality.join, on_skip: implementation-quality.join}
+
+  - id: diagnosability-review
+    description: 审查生产问题可排查性
+    agent: agents/diagnosability-reviewer
+    parallel_group: implementation-quality
+    skills: {required: [], on_demand: []}
+    entry_artifacts: {required: [workflow/review-routing.md], optional: []}
+    exit_artifacts: [quality/gates/implementation/diagnosability.md]
+    condition: 路由命中日志、异常、远程调用、Job、MQ 或线上链路
+    next: {on_pass: implementation-quality.join, on_fail: implementation-quality.join, on_skip: implementation-quality.join}
+
+  - id: consistency-review
+    description: 审查制品与实现一致性
+    agent: agents/consistency-reviewer
+    parallel_group: implementation-quality
+    skills: {required: [], on_demand: []}
+    entry_artifacts: {required: [workflow/review-routing.md], optional: [plans/implementation-plan.md]}
+    exit_artifacts: [quality/gates/implementation/consistency.md]
+    condition: 存在设计制品或跨制品交付
+    next: {on_pass: implementation-quality.join, on_fail: implementation-quality.join, on_skip: implementation-quality.join}
+
+  - id: quality-gate
+    description: 汇总专项报告并形成唯一门禁结论
+    agent: agents/quality-gate-reviewer
+    skills: {required: [], on_demand: []}
+    entry_artifacts: {required: [workflow/review-routing.md, quality/gates/implementation/static-analysis.md, quality/gates/implementation/logic-correctness.md, quality/gates/implementation/maintainability.md, quality/gates/implementation/test-adequacy.md], optional: [quality/gates/implementation/security.md, quality/gates/implementation/data-concurrency.md, quality/gates/implementation/diagnosability.md, quality/gates/implementation/consistency.md]}
+    exit_artifacts: [quality/gates/implementation/quality-gate.md]
+    condition: parallel_group implementation-quality join 完成且全部应到报告存在
     review_loop:
-      max_rounds: 5
-      on_failure: 回退给 implementer 修复
-      on_exhausted: 标记人工介入，暂停流程
+      max_attempts: 5
+      fix_target: implementation
+      on_exhausted: human-checkpoint
+    next: {on_pass: final-verification, on_fail: implementation, on_human_required: human-checkpoint}
 
-  - name: verify
-    description: 最终验证
-    skill: skills/done-verify
-    actions:
-      - 编译通过
-      - 测试全绿
-      - Lint 干净
-      - diff 只包含修复相关改动
+  - id: final-verification
+    description: 门禁通过后执行最终机械验证
+    agent: null
+    skills: {required: [skills/done-verify], on_demand: []}
+    entry_artifacts: {required: [quality/gates/implementation/quality-gate.md], optional: []}
+    exit_artifacts: [quality/verification-report.md]
+    condition: quality-gate 最后结论为 PASS
+    next: {on_pass: archive, on_fail: implementation}
 
-  - name: archive
-    description: 制品归档
-    actions:
-      - 归档 docs/artifacts/ 到 archive/{date}-{task}/
+  - id: archive
+    description: 整体归档任务制品目录
+    agent: null
+    skills: {required: [], on_demand: []}
+    entry_artifacts: {required: [delivery/change-manifest.md, quality/gates/implementation/quality-gate.md, quality/verification-report.md, workflow/workflow-state.md], optional: []}
+    exit_artifacts: [archive/{date}-{task-id}/]
+    condition: 最终验证 PASS
+    next: {on_pass: end, on_fail: human-checkpoint}
 
-agents:
-  - agents/implementer
-  - agents/code-reviewer
-  - agents/memory-consolidator
-  - agents/bug-analyst
+parallel_groups:
+  implementation-quality:
+    execution: {mode: parallel, join: all}
+    members: [static-analysis-review, logic-correctness-review, maintainability-review, test-adequacy-review, security-review, data-concurrency-review, diagnosability-review, consistency-review]
+    routing_artifact: workflow/review-routing.md
+    join_target: quality-gate
 
-# rules/ 已扁平化（无 memory/orchestration/feedback/execution 子目录），按文件名引用即可
 rules:
-  always:  # 全局 always 规则，所有工作流共享
-    - rules-loader
-    - stage-contracts
-    - correction-detection
-    - human-checkpoint
-    - java-edit-self-check
-  active:
-    - exceptions
-    - null-safety
-    - logging
-    - git-branch
-    - git-commit
-    - compile-guard
-    - lint-guard
-    - test-guard
-    - execution-boundary
-    - environment-boundary
+  always: [rules-loader, stage-contracts, correction-detection, human-checkpoint, java-edit-self-check]
+  active: [exceptions, null-safety, logging, git-branch, git-commit, compile-guard, lint-guard, test-guard, scope-guard, execution-boundary, environment-boundary]

@@ -1,23 +1,12 @@
-# feature-delivery 工作流 · 阶段 2：需求方案头脑风暴
-# 由 feature-delivery-workflow SKILL 按 feature-delivery.yaml 的 phases 顺序编排执行。
-# Cursor IDE 不自动解析此 YAML。rules / agents / global_skills 继承 feature-delivery.yaml。
-name: feature-delivery/phase-2-brainstorm
-description: 针对功能清单产出多套技术方案与推荐
-phase: 2
-entry_artifacts:
-  - docs/artifacts/feature-list.md
-exit_artifacts:
-  - docs/artifacts/brainstorm-result.md
-prev_phase: feature-delivery/phase-1-prd-split
-next_phase: feature-delivery/phase-3-hld
-
+id: brainstorm
+description: 围绕功能清单发散并收敛方案
+execution: {mode: sequential, join: all}
 steps:
-  - name: brainstorm
-    description: 需求方案头脑风暴
-    skill: skills/brainstorming
-    actions:
-      - 读取 docs/artifacts/feature-list.md
-      - 梳理需求边界和约束
-      - 列出至少 2-3 种技术方案
-      - 对比优劣并输出推荐方案到 docs/artifacts/brainstorm-result.md
-      - 如有待确认事项，触发人工检查点暂停等用户决策
+  - id: brainstorm-solution
+    description: 比较可行方案、权衡和待决策项
+    agent: null
+    skills: {required: [skills/brainstorming], on_demand: []}
+    entry_artifacts: {required: [analysis/feature-list.md], optional: [workflow/decision-log.md]}
+    exit_artifacts: [design/brainstorm-result.md]
+    condition: null
+    next: {on_pass: end, on_fail: human-checkpoint}

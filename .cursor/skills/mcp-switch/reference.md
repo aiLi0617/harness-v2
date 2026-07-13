@@ -1,6 +1,6 @@
 # MCP Switch — 详细参考
 
-> 安装与本机二进制：见 [mcp-install/reference.md](../mcp-install/reference.md)
+> 安装与本机二进制：见 `mcp-install/scripts/init-mcp.*`
 
 ## 架构
 

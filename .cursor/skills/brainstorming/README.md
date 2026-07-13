@@ -6,9 +6,9 @@
 
 在动手设计/编码之前，先把一个需求展开为 2–3 个候选技术方案，建立对比矩阵，给出带理由的推荐方案，并标注需要用户确认的决策点。本技能只做**分析与讨论**，不产出设计文档或代码。
 
-- 主要产出：**`docs/artifacts/brainstorm-result.md`**
-- 上游：`prd-splitter` 产出的 `feature-list.md`
-- 下游：`architect-hld`（概要设计）
+- 主要产出：**`{artifact_root}/design/brainstorm-result.md`**
+- 上游：`requirements-analyst` 产出的 `feature-list.md`
+- 下游：`solution-architect`（概要设计）
 
 ## 适用场景
 
@@ -18,7 +18,7 @@
 
 ## 前置条件
 
-- `docs/artifacts/feature-list.md` 已存在；不存在则停止并报告缺失
+- `{artifact_root}/analysis/feature-list.md` 已存在；不存在则停止并报告缺失
 
 ## 流程概览
 
@@ -38,14 +38,14 @@ feature-list.md
 
 | 文件 | 说明 |
 |------|------|
-| `docs/artifacts/brainstorm-result.md` | 约束清单、方案列表、对比矩阵、推荐方案、待确认事项 |
+| `{artifact_root}/design/brainstorm-result.md` | 约束清单、方案列表、对比矩阵、推荐方案、待确认事项 |
 
 ## 关键约束
 
 - 必须列出至少 2 种方案，不能只给一种
 - 推荐方案必须基于对比分析，不能凭直觉
 - 关键决策点必须写入"待确认事项"，交人工确认
-- 输出路径固定为 `docs/artifacts/brainstorm-result.md`
+- 输出路径固定为 `{artifact_root}/design/brainstorm-result.md`
 
 ## 相关资源
 

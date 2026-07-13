@@ -31,10 +31,10 @@ disable-model-invocation: true
 
 ```powershell
 # 只装 DBX MCP（自动剔除 profile 中的 mysql/redis/es）
-.cursor/skills/shared/mcp-install/scripts/bootstrap-mcp.ps1 -Servers dbx -NonInteractive
+.cursor/skills/mcp-install/scripts/init-mcp.ps1 -Servers dbx
 
 # DBX + 日志等（不要同时选 mysql-mcp/redis-mcp）
-.cursor/skills/shared/mcp-install/scripts/bootstrap-mcp.ps1 -Servers dbx,loki-mcp -NonInteractive
+.cursor/skills/mcp-install/scripts/init-mcp.ps1 -Servers dbx,loki-mcp
 ```
 
 改 **`mcp-switch/mcp.workspace.json`** 的 `dataAccess`，再跑 `switch-all-mcp-profiles.ps1`。
@@ -110,8 +110,8 @@ disable-model-invocation: true
 
 ## 相关
 
-- 安装编排：[mcp-install](../mcp-install/SKILL.md)
+- 安装编排：`mcp-install/scripts/init-mcp.*`
 - Profile MCP 数据层（互斥）：[mcp-db](../mcp-db/SKILL.md)
 - 环境切换（非数据 MCP）：[mcp-switch](../mcp-switch/SKILL.md)
 - 路由规则：`.cursor/rules/memory/data-access-backend.mdc`
-- DBX CLI（旧路径）：[dbx-data-access](../dbx-data-access/SKILL.md)
+- DBX CLI（旧路径）：旧版 `dbx-data-access`（本仓库未捆绑）

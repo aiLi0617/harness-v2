@@ -3,8 +3,9 @@
     将 Harness Cursor 配置链接到目标业务项目，并复制 MCP 工作区模板。
 
 .DESCRIPTION
-    软链（目录）: .cursor/agents, rules, skills, workflows, scripts, plugins, docs
+    目录链接: .cursor/agents, rules, skills, workflows, scripts
     硬链（文件）: .cursor/AGENTS.md, .cursor/CLAUDE.md  （Windows）
+    本地目录: docs/artifacts/work, docs/artifacts/archive
     复制（独立）: .cursor/mcp-workspace/mcp.workspace.json, mcp.workspace.secrets.json
 
 .PARAMETER Target
@@ -42,14 +43,26 @@ if (-not (Test-Path $Target)) {
 $Target = (Resolve-Path $Target).Path
 $Source = (Resolve-Path $Source).Path
 
+if ($Target -eq $Source) {
+    Write-Error "目标目录不能是 Harness 源目录本身"
+    exit 1
+}
+if ($Target.StartsWith($Source + [IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)) {
+    Write-Error "目标目录不能位于 Harness 源目录内部，避免产生循环链接: $Target"
+    exit 1
+}
+
 $linkDirs = @(
     ".cursor\agents"
     ".cursor\rules"
     ".cursor\skills"
     ".cursor\workflows"
     ".cursor\scripts"
-    ".cursor\plugins"
-    "docs"
+)
+
+$localDirs = @(
+    "docs\artifacts\work"
+    "docs\artifacts\archive"
 )
 
 $linkFiles = @(
@@ -169,6 +182,18 @@ foreach ($rel in $linkFiles) {
     } catch {
         Write-Error "[FAIL] $rel : $_"
         $failCount++
+    }
+}
+
+Write-Host ""
+Write-Host "=== 初始化目标项目本地目录 ===" -ForegroundColor Cyan
+foreach ($rel in $localDirs) {
+    $dstPath = Join-Path $Target $rel
+    if (-not (Test-Path $dstPath)) {
+        New-Item -ItemType Directory -Path $dstPath -Force | Out-Null
+        Write-LinkResult -RelPath $rel -Mode "local" -Ok $true -Detail "目标项目独立目录，不链接回 Harness"
+    } else {
+        Write-Host "[OK] $rel (local, 已存在)" -ForegroundColor Green
     }
 }
 

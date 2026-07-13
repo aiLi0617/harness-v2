@@ -4,10 +4,10 @@
 
 ## 这个 Skill 是做什么的
 
-在写入任何新文件（新类、新接口、新方法）**之前**执行一套 6 项检查清单，确认代码符合项目分层架构与编码规范。检查不通过则禁止创建文件，必须先修正。只针对**新增代码**，不对已有代码做合规扫描（那是 `code-reviewer` 的职责）。
+在写入任何新文件（新类、新接口、新方法）**之前**执行一套 6 项检查清单，确认代码符合项目分层架构与编码规范。检查不通过则禁止创建文件，必须先修正。只针对**新增代码**，不对已有代码做合规扫描（那是 `quality-gate-reviewer` 的职责）。
 
 - 由 `implementer` 在生成新文件前强制调用
-- 检查结果记录到 `docs/artifacts/harness-debug.md`（经 `harness-debug-logger`）
+- 检查结果记录到 `{artifact_root}/workflow/harness-debug.md`（经 `harness-debug-logger`）
 
 ## 适用场景
 

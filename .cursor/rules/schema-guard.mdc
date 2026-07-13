@@ -1,18 +1,26 @@
 ---
-description: Schema 一致性门禁
+description: Schema 一致性门禁；在处理匹配文件或相关任务时使用
 globs: "**/*.sql,**/entity/**/*.java,**/model/**/*.java"
 alwaysApply: false
 ---
 
 # Schema 一致性门禁
 
-## 规则
+## 适用范围
+
+- 当引用、读取或修改匹配 `**/*.sql,**/entity/**/*.java,**/model/**/*.java` 的文件，或任务语义明确涉及本规则领域时适用。
+
+## 强制规则
+
+- ⚠️ 删除 / 下沉 Entity 物理字段前，必须对所有 `getXxx()` / `setXxx()` 调用点做全局 Grep，**逐个调用点标注读写影响**（新数据读到 NULL 是否有业务副作用）。若影响面超出当前任务切片范围，必须在 `{artifact_root}/workflow/decision-log.md` 显式选择「回退字段删除」或「标注过渡期 NULL 行为并在后续切片修复」，禁止默默删字段导致下游静默读 NULL
+
+### 规则
 
 - **DDL 与 Entity 字段必须一一对应** — 新增/修改表字段后必须同步更新 Entity
 - **字段类型映射正确** — SQL 类型与 Java 类型匹配（如 VARCHAR → String, BIGINT → Long）
 - **索引与查询模式匹配** — WHERE 条件和 JOIN 字段必须有对应索引
 
-## 检查清单
+### 检查清单
 
 变更数据库结构或 Entity 时：
 
@@ -22,7 +30,7 @@ alwaysApply: false
 4. ✅ 字段命名一致（下划线 ↔ 驼峰转换正确）
 5. ✅ 新增查询条件有对应索引
 
-## 常见类型映射
+### 常见类型映射
 
 | SQL 类型 | Java 类型 |
 |----------|-----------|
@@ -35,6 +43,8 @@ alwaysApply: false
 | TINYINT(1) | Boolean |
 | BIT(1) | Boolean |
 
-## 补充规则
+## 验证清单
 
-- ⚠️ 删除 / 下沉 Entity 物理字段前，必须对所有 `getXxx()` / `setXxx()` 调用点做全局 Grep，**逐个调用点标注读写影响**（新数据读到 NULL 是否有业务副作用）。若影响面超出当前任务切片范围，必须在 `docs/artifacts/decision-log.md` 显式选择「回退字段删除」或「标注过渡期 NULL 行为并在后续切片修复」，禁止默默删字段导致下游静默读 NULL
+- 确认本规则适用范围内的强制约束均已落实。
+- 确认没有出现本规则明确禁止的行为。
+- 确认代码、配置或制品与本规则中的示例和领域约定一致。

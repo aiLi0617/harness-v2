@@ -1,4 +1,4 @@
-﻿---
+---
 name: brainstorming
 description: >-
   结构化探索需求的多种实现方案，产出约束清单与方案对比。
@@ -18,7 +18,7 @@ description: >-
 
 ## 前置条件
 
-- `docs/artifacts/feature-list.md` 已存在（由 `prd-splitter` 产出）
+- `{artifact_root}/analysis/feature-list.md` 已存在（由 `requirements-analyst` 产出）
 - 如不存在，停止执行并报告缺失
 
 ## 执行步骤
@@ -74,7 +74,7 @@ description: >-
 
 ### 第四步：输出推荐
 
-将完整分析结果写入 `docs/artifacts/brainstorm-result.md`：
+将完整分析结果写入 `{artifact_root}/design/brainstorm-result.md`：
 
 ```markdown
 # 需求方案头脑风暴
@@ -119,4 +119,4 @@ description: >-
 - 必须列出至少 2 种方案，不能只给一种
 - 推荐方案必须基于对比分析，不能凭直觉
 - 如果存在需要用户确认的关键决策点，必须在"待确认事项"中列出
-- 输出文件路径固定为 `docs/artifacts/brainstorm-result.md`
+- 输出文件路径固定为 `{artifact_root}/design/brainstorm-result.md`

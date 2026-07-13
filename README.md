@@ -1,529 +1,321 @@
-﻿# Harness Engineering
+# Harness v2
 
-> 一套围绕 Cursor IDE 的 AI 编码 Agent 工程化配置仓库。它通过 **Rules / Skills / Agents / Workflows / MCP** 五类资源，弥补 LLM 的固有缺陷（无状态、上下文受限、输出概率性），让 AI 在协助开发时**可靠、可追溯、可治理**。
+Harness v2 是一套面向 Cursor 的工程交付资源库，用 Agent、Skill、Workflow 和
+Rule 组织需求分析、系统设计、代码实施、多视角质量审查以及任务制品归档。
 
-`Agent = Model + Harness`。本仓库提供的就是那个 **Harness**——同一个模型，有了它，可以在固定工作流上稳定产出符合项目编码规范、可被人工审计的代码与设计制品。
+它不是业务代码框架，也不要求项目引入运行时依赖。仓库通过 `.cursor/` 配置和
+`docs/` 制品协议，为现有工程提供可追踪、可恢复、可审查的 AI 协作流程。
 
-## 目录
+## 为什么需要 Harness
 
-- [什么是 Harness 工程](#什么是-harness-工程)
-- [仓库结构](#仓库结构)
-- [四类资源说明](#四类资源说明)
-- [三工作流渐进体系](#三工作流渐进体系)
-- [快速开始](#快速开始)
-- [技能详细说明](#技能详细说明)
-- [制品链与一致性审查](#制品链与一致性审查)
-- [审查-修复闭环机制](#审查-修复闭环机制)
-- [人工检查点与决策记录](#人工检查点与决策记录)
-- [记忆固化机制](#记忆固化机制)
-- [全局调试日志](#全局调试日志)
-- [接入业务项目](#接入业务项目)
-- [扩展指引](#扩展指引)
-- [模板与清单](#模板与清单)
-- [仓库哲学](#仓库哲学)
+单个大 Prompt 很容易同时混合角色、方法、编排和规则，最终出现职责漂移、上下
+文膨胀、阶段遗漏以及“实现者自己宣布通过”的问题。本项目把四类职责分开：
 
----
+```text
+Agent    = WHO + WHAT + CONTRACT + ROLE POLICY
+Skill    = REUSABLE / OPTIONAL / COMPLEX HOW
+Workflow = WHEN + ORDER + BINDING + STATE
+Rule     = ALWAYS-APPLICABLE CONSTRAINT
+```
 
-## 什么是 Harness 工程
+- Agent 定义谁负责、输入输出、完成标准和岗位判断策略。
+- Skill 保存复杂且可复用的方法、命令、模板和工具操作。
+- Workflow 是阶段顺序、条件、并行、回退和制品链的唯一来源。
+- Rule 保存对所有匹配任务持续生效的工程约束和门禁红线。
 
-Harness 工程是一套围绕 AI 工具（如 Cursor）建立的工程化使用体系。它通过规则、技能、子代理、工作流四类资源，弥补 AI 模型的固有缺陷，让 AI 在辅助开发时更可靠、更高效。
+Agent 与 Skill 不要求一一对应。设计岗位可以只依赖自身的角色策略；复杂调试、
+安全重构、计划编写和机械验证则按需加载 Skill。
 
-AI 模型有四个固有缺陷：
+## 能力概览
 
-| 缺陷 | 表现 | Harness 解决方案 |
-|------|------|-----------------|
-| 无状态 | 对话结束就忘记一切 | 记忆层：规则文件持久化项目知识 + 记忆固化机制 |
-| 只能生成文字 | 无法直接操控外部世界 | 执行层：工具链 + 权限边界 |
-| 上下文窗口有限 | 不能一次处理所有信息 | 编排层：任务拆解 + 渐进式信息披露 + 制品链 |
-| 输出概率性 | 同样输入可能不同输出 | 反馈层：审查闭环 + 一致性审查 + 人工检查点 |
+- 三个稳定入口：`bugfix`、`refactoring`、`feature-delivery`。
+- 21 个 Agent：12 个业务/治理角色、9 个专项质量角色。
+- 18 个 Skill：调试、计划、重构、TDD、验证、质量路由、资源创建、工作区、MCP 和文档发布等。
+- 3 个主 Workflow 与 8 个 Feature phase，使用同一 version 2 步骤 Schema。
+- 任务级制品隔离、断点恢复、决策记录、风险审查路由和追加式质量报告。
+- Windows 与 macOS/Linux 项目链接脚本。
+- 不绑定质量模型；可在各质量 Agent 中独立配置 Cursor 支持的模型。
 
----
+## 工作方式
+
+```mermaid
+flowchart LR
+    U["用户请求"] --> W["Workflow"]
+    W --> A["业务与设计 Agent"]
+    A --> S["按需 Skill"]
+    A --> ART["任务制品"]
+    ART --> E["机械证据"]
+    E --> R["专项 Reviewer 并行审查"]
+    R --> G["Quality Gate 串行裁决"]
+    G -->|PASS| V["最终验证与归档"]
+    G -->|FAIL| F["回退实现步骤"]
+    G -->|HUMAN_REQUIRED| H["人工检查点"]
+```
+
+Workflow 步骤统一声明：
+
+```yaml
+- id: root-cause-analysis
+  description: 确认问题根因并形成可实施结论
+  agent: agents/problem-analyst
+  skills:
+    required: [skills/systematic-debug]
+    on_demand: []
+  entry_artifacts:
+    required: [context/issue-context.md]
+    optional: [analysis/log-investigation.md]
+  exit_artifacts: [analysis/root-cause.md]
+  condition: null
+  next:
+    on_pass: implementation
+    on_fail: human-checkpoint
+```
+
+`agent` 和 Skill 可以为空，但字段结构保持一致。所有制品路径均相对当前任务的
+`artifact_root`。
+
+## 三个用户入口
+
+### Bugfix
+
+适用于缺陷、测试失败、构建失败和线上异常：
+
+Bugfix 入口先判断用户意图：只有 ONES 链接、Issue Key，或用户表达“排查、分析、
+定位、查看”时，默认进入只读 `investigation`，完成 Issue 获取、可选日志调查和
+根因分析后结束，不修改代码。只有用户明确要求“修复、修改代码或实施修复”时，
+才进入 `fix` 分支。
+
+```text
+Issue / 用户描述
+→ 意图路由
+→ 问题上下文与可选日志调查
+→ 有证据的根因
+├─ investigation：返回排查结论并结束
+└─ fix：可选实现计划 → TDD 修复 → 机械证据 → 质量门禁 → 验证归档
+```
+
+### Refactoring
+
+适用于行为保持的结构调整：
+
+```text
+仓库上下文
+→ 影响分析与行为基线
+→ 安全切片计划
+→ 渐进重构
+→ 机械证据
+→ 多视角质量门禁
+→ 最终验证与归档
+```
+
+### Feature delivery
+
+适用于从 PRD 到实现的完整交付：
+
+```text
+PRD → 功能清单 → 方案讨论 → HLD 门禁
+→ DDL / API 并行设计 → LLD 门禁
+→ 实现计划 → 代码实施 → 实现质量门禁
+→ 最终验证与归档
+```
+
+八阶段编排只在 `.cursor/workflows/feature-delivery.yaml` 和
+`.cursor/workflows/feature-delivery/phase-*.yaml` 中维护，入口 Skill 不复制
+阶段清单。
+
+## Agent 清单
+
+### 业务与治理角色
+
+| Agent | 职责 |
+|---|---|
+| `issue-context-fetcher` | 获取并规范化 ONES Issue 上下文 |
+| `log-investigator` | 使用 Loki/LogQL 调查日志证据 |
+| `requirements-analyst` | 将 PRD 转为可验收功能清单 |
+| `problem-analyst` | 通过系统化调试形成根因结论 |
+| `solution-architect` | 产出系统边界和模块级 HLD |
+| `database-designer` | 设计 Schema、索引和迁移策略 |
+| `api-designer` | 设计 HTTP/RPC/事件契约 |
+| `detail-designer` | 产出类、方法、事务和测试级 LLD |
+| `implementation-planner` | 形成可执行实现计划 |
+| `refactoring-planner` | 建立行为保持的重构计划 |
+| `implementer` | 修改代码、测试并登记变更清单 |
+| `memory-consolidator` | 将已批准候选归入 Rule 的正确语义章节 |
+
+### 多模型质量委员会
+
+| Agent | 审查重点 | 触发方式 |
+|---|---|---|
+| `static-analysis-reviewer` | 编译、Lint、静态分析、依赖扫描与误报 | 必跑 |
+| `logic-correctness-reviewer` | 分支、状态、边界、异常和业务逻辑 | 必跑 |
+| `maintainability-reviewer` | 职责、复杂度、耦合、重复和扩展成本 | 必跑 |
+| `test-adequacy-reviewer` | 场景、断言、边界和回归保护 | 必跑 |
+| `security-reviewer` | 鉴权、越权、注入、敏感信息和攻击面 | 风险路由 |
+| `data-concurrency-reviewer` | 事务、幂等、锁、缓存、MQ 和迁移 | 风险路由 |
+| `diagnosability-reviewer` | 日志、指标、Trace、告警和生产排查 | 风险路由 |
+| `consistency-reviewer` | 需求、设计、计划、代码和测试一致性 | 设计/风险路由 |
+| `quality-gate-reviewer` | 报告完整性、冲突裁决和唯一门禁结论 | 必跑且串行 |
+
+质量 Agent 默认省略 `model`，继承 Cursor 默认模型。需要多模型交叉验证时，可在
+单个 Agent frontmatter 手工添加 Cursor 当前版本支持的模型字段；Workflow 和
+制品路径无需修改。
+
+## 质量协议
+
+所有实现变更至少运行静态分析、逻辑正确性、可维护性和测试充分性审查。
+Workflow 根据 `delivery/change-manifest.md`、实际 diff 和设计制品生成
+`workflow/review-routing.md`，决定是否追加安全、数据并发、可排查性和一致性
+审查。
+
+每个专项问题必须包含稳定问题 ID、严重级别、状态、证据、影响、修复要求和
+置信度：
+
+- `BLOCKER`：未解决时门禁必须 `FAIL`。
+- `WARNING`：可以随 `PASS` 交付，但必须汇总并跟踪。
+- `ADVISORY`：非阻塞改进建议。
+- 证据不足或权威语义冲突：`HUMAN_REQUIRED`。
+
+同一质量文件追加 `Check 001`、`Check 002`；机械证据追加 `Run 001`、
+`Run 002`。历史记录禁止覆盖，最后一个完整记录是当前有效状态。
+
+## 制品目录
+
+每个任务拥有独立目录：
+
+```text
+docs/artifacts/work/{task-id}/
+  context/
+  analysis/
+  design/
+  plans/
+  delivery/
+  quality/
+    evidence/implementation/
+    gates/hld-design/
+    gates/lld-design/
+    gates/implementation/
+    verification-report.md
+  workflow/
+```
+
+例如：
+
+```text
+{artifact_root}/workflow/decision-log.md
+= docs/artifacts/work/{task-id}/workflow/decision-log.md
+```
+
+`{artifact_root}` 是 Workflow 变量，不是实际目录名。任务完成后整个目录移动到
+`docs/artifacts/archive/{date}-{task-id}/`，历史归档保持只读。
+
+所有现行制品模板位于 [`docs/templates/`](docs/templates/README.md)，目录结构与
+活动制品一一对应。
 
 ## 仓库结构
 
-```
-.cursor/
-  AGENTS.md                ← 顶层代理指令（架构概述 + 三工作流总览）
-  CLAUDE.md                ← LLM 通用行为准则（精简版）
-  skills/mcp-switch/       ← MCP 注册表与环境配置（mcp-registry.json、mcp.workspace.json、secrets）
-  skills/mcp-install/      ← MCP 初始化脚本（init-mcp → 生成 ~/.cursor/mcp.json）
-  scripts/                 ← 校验脚本（check-rule-cross-refs.ps1 / .sh；init-codegraph.ps1 / .sh）
-  rules/                   ← 被动规则，自动加载（49 条，全部扁平化直接挂在 rules/ 下）
-                             编码规范类（约 28 条）：命名/异常/日志/空值/方法/注释/集合/并发/日期/POJO/依赖/API/数据库/测试/项目架构/微服务/多租户/MCP/Redis/MQ/ORM/安全/控制流/代码格式/OBS/ER 图等
-                             工作流编排类（约 6 条）：Git 分支/Git 提交/变更实施/任务拆解/阶段契约/规则加载器
-                             门禁守卫类（约 9 条）：编译/Lint/测试/变更范围/Schema/纠正检测/人工检查点/Java 编辑自检/规则交叉引用
-                             安全边界类（2 条）：操作红线/环境边界
-    projects/<project>/        项目特化规则（按需创建；文件名带 <project>- 前缀，frontmatter 必须有 globs 锁回所属项目；详见 rules-loader.mdc）
-                             当前已内置：projects/broker/（13 条）
-  skills/                  ← 主动技能，按需调用（共 16 个，全部扁平化直接挂在 skills/<skill-name>/SKILL.md）
-                             共享类：harness-debug-logger/done-verify/git-worktree/codegen-guard
-                             bugfix 场景：systematic-debug/tdd-bugfix
-                             refactoring 场景：refactor-plan/safe-refactoring
-                             feature 场景：brainstorming/writing-plans/feature-delivery-workflow/hld-to-feishu/lld-to-feishu
-                             MCP 基础设施：mcp-switch/mcp-db/mcp-dbx
-    projects/<project>/<skill-name>/SKILL.md   项目特化技能（按需创建；SKILL.md 描述首句声明仅适用于该项目）
-  agents/                  ← 子代理，工作流调度（共 16 个，全部扁平化直接挂在 agents/<agent-name>.md）
-                             共享类（4）：implementer/code-reviewer/memory-consolidator/consistency-reviewer
-                             bugfix 场景（3）：bug-analyst/ones-issue-fetcher/loki-log-investigator
-                             refactoring 场景（2）：refactoring-planner/code-quality-reviewer
-                             feature 场景（7）：prd-splitter/architect-hld/db-ddl/api-contract/lld-author/impl-planner/spec-reviewer
-    projects/<project>/<agent-name>.md         项目特化代理（按需创建；仅由该项目对应的 workflow YAML 引用）
-  workflows/               ← 工作流 YAML（3 个主流程 + 8 个阶段文件，渐进包含）
-    bugfix.yaml              Bug 修复（最小集）
-    refactoring.yaml         代码重构（在 Bug 修复基础上扩展）
-    feature-delivery.yaml    PRD→交付（完整流水线；编排 8 个 phase-*.yaml）
-docs/
-  templates/               ← 模板与清单
-    review-checklist.md      AI 产出人工审查清单
-    task-template.md         需求拆解模板
-    decision-log-template.md 决策记录模板
-    debug-log-template.md    调试日志模板
-  artifacts/               ← 子代理间的制品交接目录
-    archive/                 历史制品归档
-link-cursor-config.ps1     ← Windows：软链 Harness 配置 + 复制 MCP 工作区到业务项目
-link-cursor-config.sh      ← macOS/Linux：同上
+```text
+.
+├─ .cursor/
+│  ├─ agents/       # 角色与交付契约
+│  ├─ skills/       # 可复用复杂方法
+│  ├─ workflows/    # 三个入口和八个 Feature phase
+│  ├─ rules/        # 始终生效或按文件匹配的约束
+│  ├─ scripts/      # 资源与交叉引用校验
+│  └─ AGENTS.md     # Cursor Harness 总约定
+├─ docs/
+│  ├─ architecture.md
+│  ├─ resource-placement-guide.md
+│  ├─ templates/
+│  └─ artifacts/
+├─ link-cursor-config.ps1
+└─ link-cursor-config.sh
 ```
 
----
+Agent 与 Skill 保持扁平目录。项目不使用 Agent/Skill Registry、alias、`domain`
+或 `tags` 作为发现机制。
 
-## 四类资源说明
+## 安装到业务项目
 
-| 类型 | 性质 | 加载方式 | 类比 |
-|------|------|----------|------|
-| Rules | 被动约束 | 自动加载（always/glob） | 交通规则 |
-| Skills | 主动能力 | AI 检测到任务时调用 | 驾驶技能 |
-| Agents | 独立代理 | 由工作流调度派出 | 专职司机 |
-| Workflows | 流程编排 | 用户触发 | 导航路线 |
+克隆本仓库后，通过链接脚本把 Harness 资源接入目标项目。
 
-**混合组织原则**：Rules、Skills、Agents 三类资源均已扁平化（按文件名直接引用，原分类层仅保留为语义标签），Workflows YAML 跨资源类型组合调度。
+Windows PowerShell：
 
----
-
-## 三工作流渐进体系
-
-三个工作流是渐进包含关系，像俄罗斯套娃：
-
-```mermaid
-flowchart LR
-    subgraph bugfix ["1. Bug 修复（最小集）"]
-        B1[复现] --> B2[根因分析] --> B3[修复] --> B4[验证]
-    end
-    subgraph refactor ["2. 代码重构（扩展 Bug 修复）"]
-        R1[代码分析] --> R2[重构方案] --> R3[逐步重构] --> R4["回归验证"]
-    end
-    subgraph feature ["3. PRD 到测试（完整流程）"]
-        F1[PRD拆分] --> F2[概要设计] --> F3[详细设计] --> F4[实现] --> F5[审查验证]
-    end
-    bugfix -.->|"复用 修复+验证"| refactor
-    refactor -.->|"复用 分析+验证"| feature
+```powershell
+.\link-cursor-config.ps1 -Target "D:\Work\Project\your-project"
 ```
 
-### 工作流 1：Bug 修复（bugfix.yaml）
+macOS / Linux：
 
-```
-触发 → 复现Bug → 根因分析 → 编写修复 → 验证 → 审查 → 完成
-```
-
-适用场景：修复已知 bug、处理异常报告、解决线上问题。
-
-使用资源：
-- **Agents**: `agents/implementer` + `agents/code-reviewer` + `agents/memory-consolidator` + `agents/bug-analyst`
-- **Skills**: `skills/done-verify` + `skills/systematic-debug` + `skills/tdd-bugfix`
-- **Rules**（按文件名引用，已扁平化）：
-  - 编码规范：`exceptions` + `null-safety` + `logging`
-  - 工作流编排：`git-branch` + `git-commit`
-  - 门禁守卫：`compile-guard` + `lint-guard` + `test-guard`
-  - 安全边界：`execution-boundary` + `environment-boundary`
-
-### 工作流 2：代码重构（refactoring.yaml）
-
-```
-触发 → 代码分析 → 制定方案 → 逐步重构 → 回归验证 → 质量审查 → 完成
+```bash
+./link-cursor-config.sh ~/Work/Project/your-project
 ```
 
-适用场景：消除代码坏味道、改善代码结构、提升可维护性。
+目标已存在同名资源时脚本默认跳过；确认需要替换后，Windows 使用 `-Force`，
+macOS/Linux 使用 `-f`。强制模式会覆盖目标项目中的同名资源，执行前应确认目标
+目录没有需要保留的本地配置。
 
-使用资源（Bug 修复的全部 + 以下新增）：
-- **Agents**: + `agents/refactoring-planner` + `agents/code-quality-reviewer`
-- **Skills**: + `skills/refactor-plan` + `skills/safe-refactoring`
-- **Rules 新增**（按文件名）：
-  - 编码规范：+ `method-design` + `naming` + `comments`
-  - 工作流编排：+ `change-implementation`
-  - 门禁守卫：+ `scope-guard`
+脚本只链接 `.cursor/agents`、`rules`、`skills`、`workflows`、`scripts` 以及
+`.cursor/AGENTS.md`、`.cursor/CLAUDE.md`，并在目标项目复制独立的 MCP
+工作区配置模板。`docs/templates` 不链接；目标项目只创建本地
+`docs/artifacts/work` 和 `docs/artifacts/archive`，任务制品不会回写 Harness
+仓库。密钥配置同样不会与 Harness 仓库共享。
 
-### 工作流 3：PRD 到测试（feature-delivery.yaml）
+## MCP 工作区
 
-```
-[可选: 云文档导入→prd-source.md] → 功能拆分 → 头脑风暴 → 概要设计 → [一致性审查] → [HLD→飞书→人工确认]
-  → DDL/API → 详细设计 → [一致性审查] → [LLD→飞书→人工确认]
-  → 实现计划 → 编码 → [规格审查] → [质量审查] → [通用审查] → 验证 → 收尾
-```
+链接完成后：
 
-适用场景：新功能开发、需求迭代、模块新建。首步可选：从飞书等云文档将 PRD 内容导入为本地 md 文件，后续全程基于本地 md 文件流转。概要设计和详细设计通过审查后，自动发布到飞书云文档供人工确认。
+1. 编辑 `.cursor/mcp-workspace/mcp.workspace.json`。
+2. 编辑 `.cursor/mcp-workspace/mcp.workspace.secrets.json`。
+3. 按环境初始化 MCP Profile。
 
-使用资源（重构的全部 + 以下新增）：
-- **Agents**: + `agents/prd-splitter` + `agents/architect-hld` + `agents/lld-author` + `agents/impl-planner` + `agents/db-ddl` + `agents/api-contract` + `agents/spec-reviewer` + `agents/consistency-reviewer`
-- **Skills**: + `skills/brainstorming` + `skills/writing-plans` + `skills/feature-delivery-workflow` + `skills/hld-to-feishu` + `skills/lld-to-feishu` + `skills/codegen-guard`
-- **Rules 新增**（按文件名）：
-  - 编码规范：+ `project-architecture` + `database` + `api-design` + `testing` + `dependencies`（编码规范类全部激活）
-  - 工作流编排：+ `task-decomposition`
-  - 门禁守卫：+ `schema-guard`
+Windows 示例：
 
-**完整审查链**（渐进继承 + 新增）：
-
-1. `consistency-reviewer` — 阶段交接时校验制品对齐（HLD 后、LLD 后）
-2. `spec-reviewer` — 实现完成后校验代码是否按 LLD 设计
-3. `code-quality-reviewer` — 继承自重构流程，校验代码质量
-4. `code-reviewer` — 继承自 Bug 修复流程，最终审查
-
----
-
-## 快速开始
-
-### 修复 Bug
-
-告诉 AI："修复 [bug 描述]"，将自动启动 `bugfix` 工作流。
-
-### 重构代码
-
-告诉 AI："重构 [目标代码/模块]"，将自动启动 `refactoring` 工作流。
-
-### 开发新功能
-
-告诉 AI："实现 [PRD/需求描述]"，将自动启动 `feature-delivery` 工作流。
-
-### 查看执行日志
-
-工作流执行后，查看 `docs/artifacts/harness-debug.md` 了解完整轨迹。
-
-### 查看历史制品
-
-已完成任务的制品归档在 `docs/artifacts/archive/` 目录下。
-
----
-
-## 技能详细说明
-
-### 共享技能（原 `shared/` 分组）
-
-**harness-debug-logger** — Harness 全局调试日志
-- 记录 harness 工程运行时的完整轨迹，用于调试工作流执行过程
-- 触发点：规则加载、资源冲突检测、技能调用、子代理派发、审查闭环、人工检查点
-- 产出：`docs/artifacts/harness-debug.md`（格式见 `docs/templates/debug-log-template.md`）
-
-**done-verify** — 完成前验证检查清单
-- 在任何任务标记"完成"前，强制执行检查清单：编译通过 → 测试全绿 → Lint 干净 → diff 只含需求相关改动 → 无遗留 TODO
-
-**git-worktree** — Git Worktree 并行开发
-- 当多个子任务可并行时，用 git worktree 创建隔离工作目录，避免分支切换冲突
-
-**codegen-guard** — 代码生成合规守卫
-- 创建新源代码文件或新增类/接口时，检查分层、命名、是否有可复用代码、包路径
-
-### Bug 修复技能（原 `bugfix/` 分组）
-
-**systematic-debug** — 结构化调试流程
-- 收集信息（日志/堆栈/复现步骤）→ 形成假设列表 → 逐个验证假设 → 确认根因 → 输出根因分析报告
-
-**tdd-bugfix** — 测试驱动修复
-- 先写一个失败测试复现 bug → 修改代码让测试通过 → 运行全量回归测试确认无副作用
-
-### 重构技能（原 `refactoring/` 分组）
-
-**refactor-plan** — 重构方案规划
-- 识别坏味道类型 → 选择重构手法 → 拆分为可独立验证的小步骤序列 → 输出重构计划
-
-**safe-refactoring** — 安全重构执行
-- 每步只做一种重构操作 → 每步完成后立即运行测试 → 测试红了立即回滚 → 禁止在重构中夹带功能变更
-
-### 功能交付技能（原 `feature/` 分组）
-
-**brainstorming** — 需求方案头脑风暴
-- 梳理需求边界和约束 → 列出至少 2-3 种技术方案 → 对比优劣 → 输出推荐方案和理由
-
-**writing-plans** — 设计转实现计划
-- 拆分子任务 → 标注依赖关系 → 判断哪些可并行 → 定义验证方式 → 输出结构化计划文档
-
-**feature-delivery-workflow** — 全流程交付编排
-- 作为功能交付的总指挥，按阶段依次调度子代理（PRD 拆分→头脑风暴→概要设计→DDL/API→详细设计→实现计划→编码→审查→验证→收尾）
-
-**hld-to-feishu** / **lld-to-feishu** — 设计文档发布飞书
-- 概要设计/详细设计通过一致性审查后，自动发布到飞书云文档供人工确认
-
----
-
-## 制品链与一致性审查
-
-子代理会话隔离，通过文件交接：每个子代理读取上游制品，完成后写入下游制品，**真相在文件里**。
-
-### 制品流转图
-
-```mermaid
-flowchart TD
-    IMP0["云文档导入（可选）"] -.->|"写入"| A0["artifacts/prd-source.md"]
-    A0 -.->|"读取（如存在）"| PFS["prd-splitter"]
-    PFS -->|"写入"| A1["artifacts/feature-list.md"]
-    A1 -->|"读取"| BS["brainstorming"]
-    BS -->|"写入"| A2["artifacts/brainstorm-result.md"]
-    A2 -->|"读取"| HLD["architect-hld"]
-    HLD -->|"写入"| A3["artifacts/hld.md"]
-    A3 -->|"读取"| CR1["consistency-reviewer：功能清单 vs HLD"]
-    CR1 -->|"通过后读取"| DDL["db-ddl / api-contract"]
-    DDL -->|"写入"| A4["artifacts/ddl.md + api-contract.md"]
-    A4 -->|"读取"| LLD["lld-author"]
-    LLD -->|"写入"| A5["artifacts/lld.md"]
-    A5 -->|"读取"| CR2["consistency-reviewer：HLD vs LLD vs DDL/API"]
-    CR2 -->|"通过后读取"| IP["impl-planner"]
-    IP -->|"写入"| A6["artifacts/impl-plan.md"]
-    A6 -->|"读取"| IMP["implementer"]
+```powershell
+powershell -File .cursor/skills/mcp-install/scripts/init-mcp.ps1 -Profile dev
 ```
 
-### 制品文件清单
+`issue-context-fetcher` 的描述保留 ONES/ONES MCP 发现关键词；
+`log-investigator` 保留 Loki、LogQL 和 traceId 关键词。平台名称不进入 Agent
+文件名，但不会丢失 Cursor 的能力发现提示。
 
-| 文件 | 说明 |
-|------|------|
-| `prd-source.md` | PRD 原文本地副本（可选，从云文档导入） |
-| `feature-list.md` | 功能点列表、优先级、验收标准 |
-| `brainstorm-result.md` | 技术方案选项、对比、推荐理由 |
-| `hld.md` | 模块划分、接口草案、数据流、技术选型 |
-| `ddl.md` | 表结构、索引、约束 |
-| `api-contract.md` | 接口路径、请求/响应体、状态码 |
-| `lld.md` | 类设计、方法签名、序列图、关键算法 |
-| `impl-plan.md` | 子任务清单、依赖关系、并行策略、验证方式 |
-| `decision-log.md` | 用户决策记录（格式见 `docs/templates/decision-log-template.md`） |
-| `harness-debug.md` | Harness 调试日志（格式见 `docs/templates/debug-log-template.md`） |
+## 校验
 
-### 制品生命周期
+Windows：
 
-活跃制品始终在 `docs/artifacts/` 根目录，任务完成后自动归档。
-
-```
-docs/artifacts/
-  feature-list.md          ← 当前任务的活跃制品（平铺）
-  hld.md
-  lld.md
-  ...
-  archive/                 ← 历史归档
-    2026-04-16-用户注册功能/
-      feature-list.md
-      hld.md
-      lld.md
-      review-report-final.md
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/scripts/check-harness-resources.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/scripts/check-rule-cross-refs.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/scripts/smoke-workflows.ps1
 ```
 
-**归档规则**：
-1. 触发时机：任务收尾阶段（`done-verify` 技能执行后）
-2. 归档动作：将 `docs/artifacts/` 根目录下所有 `.md` 文件移入 `archive/{日期}-{任务简称}/`
-3. 命名格式：`archive/YYYY-MM-DD-{任务简称}/`
-4. 归档后根目录恢复干净状态，只保留 `.gitkeep` 和 `archive/`
-5. 归档只是移动，不删除任何文件，历史可追溯
+macOS / Linux：
 
-### 一致性审查
-
-在关键阶段交接点插入 `consistency-reviewer` 子代理，校验上下游制品对齐。
-
-**审查点 1**：HLD 完成后
-- 输入：`feature-list.md` + `hld.md`
-- 校验：每个功能点是否都有对应的模块/接口？HLD 是否引入了功能清单没有的内容？
-- 不通过：输出差异报告，回退给 `architect-hld` 修正
-
-**审查点 2**：LLD 完成后
-- 输入：`hld.md` + `ddl.md` + `api-contract.md` + `lld.md`
-- 校验：LLD 中的类/方法是否覆盖 HLD 所有接口？DDL 字段是否与 LLD 实体一致？API 契约参数是否与 LLD 方法签名匹配？
-- 不通过：输出差异报告，回退给 `lld-author` 修正
-
-**审查点 3**（可选）：实现完成后
-- 输入：`lld.md` + 实际代码
-- 校验：代码是否按 LLD 的类/方法设计实现？
-- 由 `spec-reviewer` 执行
-
----
-
-## 审查-修复闭环机制
-
-所有审查节点统一遵循同一套闭环流程：
-
-```mermaid
-flowchart TD
-    R["审查者执行审查"] --> Report["输出审查问题报告"]
-    Report --> Check{"有未通过项？"}
-    Check -->|"无"| Pass["审查通过，进入下一阶段"]
-    Check -->|"有"| Count{"已修复轮次 < 5？"}
-    Count -->|"是"| Fix["回退给对应代理修复"]
-    Fix --> R
-    Count -->|"否（达到5轮上限）"| Escalate["标记为【人工介入】\n暂停流程等待用户"]
+```bash
+./.cursor/scripts/check-harness-resources.sh
+./.cursor/scripts/check-rule-cross-refs.sh
+./.cursor/scripts/smoke-workflows.sh
 ```
 
-**闭环规则**：
+资源校验覆盖：
 
-1. **输出报告**：每轮审查产出结构化报告，记录到 `docs/artifacts/`，含问题列表（阻塞/警告/建议）、涉及文件和行号、修复建议
-2. **自动回退修复**：审查不通过时，自动将报告发给对应上游代理修正
-3. **再次审查**：修复完成后重新进入同一审查节点
-4. **最多 5 轮**：防止死循环
-5. **超限处理**：达到 5 轮仍有未通过项时，合并所有历史轮次报告，剩余问题标记为【人工介入】，暂停等待用户
+- 21/18/11 资源数量与 frontmatter 名称；
+- Workflow Agent/Skill 引用和统一步骤字段；
+- `review-routing`、`repository-context` 的生产者契约与质量 fan-out/join；
+- Bugfix、Refactoring、Feature delivery 三条制品链；
+- 废弃名称、旧制品根路径和旧 Schema；
+- 设计/质量 Agent 的岗位策略章节；
+- `stage-contracts.mdc` 与 Agent 的标题、路径和关键词重复风险。
 
-**各工作流的审查闭环**：
+## 文档
 
-| 工作流 | 审查链 |
-|--------|--------|
-| Bug 修复 | 编码 → `code-reviewer`（闭环）→ 验证 → 完成 |
-| 代码重构 | 重构 → `code-quality-reviewer`（闭环）→ `code-reviewer`（闭环）→ 验证 → 完成 |
-| 功能交付 | 编码 → `spec-reviewer`（闭环）→ `code-quality-reviewer`（闭环）→ `code-reviewer`（闭环）→ 验证 → 完成 |
+- [架构与运行模型](docs/architecture.md)
+- [资源放置指南](docs/resource-placement-guide.md)
+- [完整制品模板](docs/templates/README.md)
 
----
+## 修改原则
 
-## 人工检查点与决策记录
-
-工作流执行过程中遇到不确定情况时，暂停询问用户，并将问答记录持久化。
-
-**暂停条件**（`human-checkpoint.mdc`，always 加载）：
-
-| 场景 | 说明 |
-|------|------|
-| 需求模糊 | 需求描述有歧义、缺少边界条件、可以有多种理解 |
-| 方案抉择 | 存在多个可行方案且各有明显优劣，无法自行判定 |
-| 风险操作 | 删表、改接口签名、移除公共方法、破坏性数据迁移等不可逆变更 |
-| 超出范围 | 发现需求涉及的改动超出预期范围 |
-| 假设不确定 | 对业务逻辑的理解基于假设，无法从代码/文档中确认 |
-
-每次暂停后将问答追加到 `docs/artifacts/decision-log.md`（格式见 `docs/templates/decision-log-template.md`）。下游子代理启动时必须读取该文件，确保不违背已有决策。
-
----
-
-## 记忆固化机制
-
-当用户在指导过程中重复指出同类错误时，自动将纠正固化为持久规则。
-
-```mermaid
-flowchart LR
-    U["用户纠正（第2次+同类错误）"] --> CD["correction-detection.mdc\n识别重复纠正"]
-    CD --> MC["memory-consolidator 子代理"]
-    MC --> CL["分类判定"]
-    CL --> W["写入对应 .mdc\nrules/xxx.mdc"]
-    W --> N["下次自动加载\n不再犯同样错误"]
-```
-
-**correction-detection.mdc**（反馈/门禁类规则）：
-- always 加载，监听对话中的纠正信号（"我说过""又犯了""之前提过"等）
-- 检测到重复纠正时，调度 `memory-consolidator` 子代理
-
-**memory-consolidator.md**（共享子代理）：
-- 提取核心规则 → 判断归属分类 → 追加写入对应 `.mdc` 文件
-
-**分类映射表**（已扁平化，引用直接用文件名）：
-
-| 纠正类别 | 目标文件 |
-|----------|----------|
-| 命名 | `naming.mdc` |
-| 异常处理 | `exceptions.mdc` |
-| 日志 | `logging.mdc` |
-| 空值 | `null-safety.mdc` |
-| 方法设计 | `method-design.mdc` |
-| 注释 | `comments.mdc` |
-| 数据库 | `database.mdc` |
-| API | `api-design.mdc` |
-| 测试 | `testing.mdc` |
-| 集合处理 | `collections.mdc` |
-| 并发处理 | `concurrency.mdc` |
-| 日期时间 | `datetime.mdc` |
-| POJO/OOP | `pojo.mdc` |
-| 依赖管理 | `dependencies.mdc` |
-| 项目架构 | `project-architecture.mdc` |
-| 多租户隔离 | `tenant-isolation.mdc` |
-| Git 分支 | `git-branch.mdc` |
-| Git 提交 | `git-commit.mdc` |
-| 无法归类 | 新建 `<topic>.mdc` |
-
----
-
-## 全局调试日志
-
-由 `harness-debug-logger` 技能在工作流每个步骤执行前后自动记录，输出到 `docs/artifacts/harness-debug.md`。
-
-**记录粒度**：步骤级别（技能调用、子代理派发、审查轮次），不记录代码行级细节。
-
-**必录字段**：时间戳、阶段、资源名称（文件路径）、输入摘要、输出摘要、引用文件列表。
-
-**资源冲突检测**：工作流启动后、第一个步骤执行前，自动扫描所有激活资源间的冲突：
-
-| 类型 | 说明 |
-|------|------|
-| 职责重叠 | 两个资源对同一件事都有定义，可能执行两次或标准不一致 |
-| 定义矛盾 | 两个资源对同一件事给出相反的指令 |
-| 引用缺失 | 某个资源引用了另一个资源，但后者未被激活 |
-| 覆盖空白 | 工作流的某个阶段没有任何规则/技能覆盖 |
-
-冲突记入日志作为告警，不阻塞流程。日志格式详见 `docs/templates/debug-log-template.md`。
-
----
-
-## 接入业务项目
-
-1. 克隆本仓库到本地任意目录
-2. 在目标业务项目根目录执行链接脚本：
-   - Windows：`powershell -File <harness-path>\link-cursor-config.ps1 <业务项目路径>`
-   - macOS/Linux：`bash <harness-path>/link-cursor-config.sh <业务项目路径>`（无需事先 `chmod +x`；脚本会自修复 harness 内 `.sh` 可执行权限）
-3. 链接脚本会把 `.cursor/rules`、`.cursor/skills`、`.cursor/agents`、`.cursor/workflows`、`.cursor/scripts` 以 symlink 挂到业务项目，并将 MCP 工作区配置**复制**到 `.cursor/mcp-workspace/`
-4. 配置 MCP：
-   - 编辑 `.cursor/mcp-workspace/mcp.workspace.json`（`projects.local.path`、profile servers 等）
-   - 编辑 `.cursor/mcp-workspace/mcp.workspace.secrets.json`（密钥）
-   - Windows：`powershell -File .cursor/skills/mcp-install/scripts/init-mcp.ps1 -Profile dev`
-   - macOS/Linux：`bash .cursor/skills/mcp-install/scripts/init-mcp.sh --profile dev`
-   - 日常切换环境：`switch-all-mcp-profiles.ps1 dev|sit|pre`（见 `skills/mcp-switch/SKILL.md`）
-   - 生成结果写入 `~/.cursor/mcp.json`；项目级 `.cursor/mcp.json` 已被 gitignore 忽略
-5. （可选）初始化 CodeGraph 索引（配合 `codegraph-mcp`）：
-   - Windows：`powershell -File <harness-path>\.cursor\scripts\init-codegraph.ps1 -ProjectPath <业务项目路径>`
-   - macOS/Linux：`bash <harness-path>/.cursor/scripts/init-codegraph.sh <业务项目路径>`
-   - 建议在 init 时接受 git hooks，切分支后会自动 sync
-6. （可选）安装 Loki MCP（配合 `loki-mcp` / `loki-log-investigator`）：
-   - Windows：`powershell -File <harness-path>\.cursor\scripts\init-loki-mcp.ps1 -LokiUrl <LOKI_URL> -ProjectPath <业务项目路径>`
-   - macOS/Linux：`bash <harness-path>/.cursor/scripts/init-loki-mcp.sh --loki-url <LOKI_URL> <业务项目路径>`
-7. 业务项目内的所有 AI 操作即自动遵守本仓库规则；升级规则只需在 harness 仓库 `git pull`
-
----
-
-## 扩展指引
-
-| 扩展类型 | 操作 |
-|----------|------|
-| 新增编码规范 | `rules/<topic>.mdc`（已扁平化，无子目录），设置 `globs` 匹配模式；在 `rules-loader.mdc` 场景表添加加载条目 |
-| 规则组合阅读 | 在 `rules-loader.mdc` 场景表并列列出，**禁止**在规则正文互引其他 `.mdc` |
-| 规则交叉引用检查 | Windows: `.cursor/scripts/check-rule-cross-refs.ps1`；macOS/Linux: `bash .cursor/scripts/check-rule-cross-refs.sh`（或链接后 `./…`，见 `cross-ref-guard.mdc`） |
-| 新增技能 | `skills/<技能名>/SKILL.md`（已扁平化，无工作流子目录） |
-| 新增子代理 | `agents/<代理名>.md`（已扁平化，无工作流子目录） |
-| 新增 MCP | 在 `skills/mcp-switch/mcp-registry.json` 注册 server，在 `mcp.workspace.json` 各 profile 启用，并在 `rules/mcp.mdc` 登记用途 |
-| 新增分类映射 | 同步更新三处分类表：`rules-loader.mdc`、`correction-detection.mdc`、`memory-consolidator.md` |
-| 适配新项目 | 编辑 `rules/project-architecture.mdc` 填入分层结构；不需要的规则把 `alwaysApply` 改为 `false` |
-| **新增项目特化规则** | `rules/projects/<project>/<project>-<topic>.mdc`；frontmatter 必须含非空 `globs` 锁回本项目特征路径，`alwaysApply: false`；**不**登记到任何场景/分类映射表（详见 `rules-loader.mdc` 「项目特化规则加载约定」） |
-| **新增项目特化技能** | `skills/projects/<project>/<skill-name>/SKILL.md`；SKILL.md `description` 首句必须声明"仅适用于 \<project\> 项目" |
-| **新增项目特化代理** | `agents/projects/<project>/<agent-name>.md`；仅由该项目对应的 workflow YAML 显式引用，禁止在通用 workflow 中调度 |
-
----
-
-## 模板与清单
-
-以下模板位于 `docs/templates/` 目录：
-
-| 模板 | 用途 |
-|------|------|
-| [review-checklist.md](docs/templates/review-checklist.md) | 人工审查 AI 产出代码时的检查清单 |
-| [task-template.md](docs/templates/task-template.md) | 需求拆解的结构化模板 |
-| [decision-log-template.md](docs/templates/decision-log-template.md) | 人工检查点的决策记录格式 |
-| [debug-log-template.md](docs/templates/debug-log-template.md) | Harness 全局调试日志的记录格式 |
-
----
-
-## 仓库哲学
-
-> 每当 Agent 犯了一个错误，你就花时间设计一个解决方案，让 Agent 再也不会犯同样的错。 — Mitchell Hashimoto
-
-本仓库的所有规则、技能、代理都是这种"沉淀"的产物。如果发现 AI 输出不符合预期，优先考虑：
-1. 这条经验能不能写成一条 `.mdc` 规则？
-2. 这个工作流能不能拆出一个 skill？
-3. 这个任务能不能交给一个专用子代理？
-
-不要靠"下次再提醒一次"。靠仓库。
-
----
-
-⚙️ 当前版本：v2（三工作流渐进体系） | 📦 资源数：49 rules + 13 broker-rules + 16 skills + 16 agents + 3 workflows + 11 MCP
+1. 调整角色职责时修改 Agent；复杂可复用 HOW 才进入 Skill。
+2. 阶段、顺序、并行、回退和制品生产消费关系只修改 Workflow。
+3. 对所有任务始终生效的红线进入 Rule。
+4. 修改资源后同步更新引用和模板，并运行两项校验。
+5. 不修改历史归档来迁就新结构；需要解释时新增迁移记录。

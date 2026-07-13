@@ -1,12 +1,25 @@
 ---
-description: 数据库规范
+description: 数据库规范；在处理匹配文件或相关任务时使用
 globs: "**/*.sql,**/*Mapper*.java,**/*Mapper*.xml"
 alwaysApply: false
 ---
 
 # 数据库规范
 
-## 命名规范
+## 适用范围
+
+- 当引用、读取或修改匹配 `**/*.sql,**/*Mapper*.java,**/*Mapper*.xml` 的文件，或任务语义明确涉及本规则领域时适用。
+
+## 强制规则
+
+- 接口添加了权限注解时，必须同步生成对应的菜单权限 DML（INSERT INTO 菜单表），确保权限数据与代码一致，DML 放在对应模块的 SQL 变更脚本中
+- 字段名长度不超过 20 字符，超长使用公认缩写（如 number→num、image→img）
+- `id` 字段统一 `bigint unsigned`；金额类 `decimal`，小数位按业务（通常 8 位）
+- 单表超 500 万行或 2GB 才考虑分库分表；字段冗余须满足：非频繁修改、非 varchar 超长、非唯一索引字段
+- 禁止 MySQL `WITH RECURSIVE`；`in` 集合元素 ≤ 1000；数据订正前先 select 确认
+- ⚠️ 编写 DDL / 数据迁移脚本 / 涉及表字段的业务逻辑前，**必须先 Read 对应的 Entity (`*DO.java`) 确认物理字段**是否存在、类型、所在表；禁止按"业务名称"推断字段（典型反例：假设 `agreement` 表有 `supplier_id`，实际该字段在 `agreement_attribution` 且语义为 `member_id`；假设有 `broker_yunshang_code`，实际分布在两张表）。跨表字段必须 JOIN 到真实来源表，不得冗余假设字段
+
+### 命名规范
 
 - **表名** — 小写字母或数字，下划线分隔，**使用名词单数**（如 `user_order` 而非 `user_orders`），禁止数字开头和两个下划线间只出现数字
 - **字段名** — 小写下划线（如 `create_time`、`user_name`），禁止大写字母
@@ -17,7 +30,7 @@ alwaysApply: false
 - **库名与应用名尽量一致**
 - **禁用保留字** — 如 `desc`、`range`、`match`、`delayed` 等
 
-## 建表规约
+### 建表规约
 
 - **表必备六字段**（字符集统一 `utf8mb4 COLLATE utf8mb4_general_ci`）：
   - `id` BIGINT 主键自增
@@ -35,7 +48,7 @@ alwaysApply: false
 - **单表行数超过 500 万或容量超过 2GB** 才推荐分库分表
 - **字段注释** — 修改字段含义或追加状态时须及时更新注释
 
-## SQL 规约
+### SQL 规约
 
 - **必须使用参数绑定 `#{}`** — 禁止 `${}` 和字符串拼接 SQL，防止 SQL 注入
 - **禁止 SELECT *** — 明确列出需要的字段，减少网络消耗和解析成本
@@ -51,7 +64,7 @@ alwaysApply: false
 - **超过三个表禁止 JOIN** — 关联字段数据类型一致且有索引
 - **varchar 索引须指定长度** — 一般长度 20 的索引区分度达 90%+
 
-## 索引规约
+### 索引规约
 
 - **业务唯一字段必须建唯一索引** — 包括组合字段
 - **组合索引区分度最高的在最左边**；存在非等号与等号混合条件时，**等号列前置**（如 `where c>? and d=?` 建 `idx_d_c`）
@@ -62,11 +75,8 @@ alwaysApply: false
 - **【推荐】超多分页** — 先定位 id 段再关联，避免大 offset
 - **【推荐】SQL 性能目标** — 至少 range，要求 ref，最好 const
 
-## 补充规则
+## 验证清单
 
-- 接口添加了权限注解时，必须同步生成对应的菜单权限 DML（INSERT INTO 菜单表），确保权限数据与代码一致，DML 放在对应模块的 SQL 变更脚本中
-- 字段名长度不超过 20 字符，超长使用公认缩写（如 number→num、image→img）
-- `id` 字段统一 `bigint unsigned`；金额类 `decimal`，小数位按业务（通常 8 位）
-- 单表超 500 万行或 2GB 才考虑分库分表；字段冗余须满足：非频繁修改、非 varchar 超长、非唯一索引字段
-- 禁止 MySQL `WITH RECURSIVE`；`in` 集合元素 ≤ 1000；数据订正前先 select 确认
-- ⚠️ 编写 DDL / 数据迁移脚本 / 涉及表字段的业务逻辑前，**必须先 Read 对应的 Entity (`*DO.java`) 确认物理字段**是否存在、类型、所在表；禁止按"业务名称"推断字段（典型反例：假设 `agreement` 表有 `supplier_id`，实际该字段在 `agreement_attribution` 且语义为 `member_id`；假设有 `broker_yunshang_code`，实际分布在两张表）。跨表字段必须 JOIN 到真实来源表，不得冗余假设字段
+- 确认本规则适用范围内的强制约束均已落实。
+- 确认没有出现本规则明确禁止的行为。
+- 确认代码、配置或制品与本规则中的示例和领域约定一致。

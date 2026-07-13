@@ -1,6 +1,6 @@
 # DBX MCP — 连接命名参考
 
-> 命名与 DBX 桌面端、[dbx-data-access/reference.md](../dbx-data-access/reference.md) 保持一致；MCP 通过连接 **name** 访问，不使用 `dbx` CLI。
+> 命名与 DBX 桌面端、旧版 `dbx-data-access` 约定（本仓库未捆绑） 保持一致；MCP 通过连接 **name** 访问，不使用 `dbx` CLI。
 
 ## 格式
 

@@ -1,141 +1,92 @@
-# 本文件为 feature-delivery 工作流的「编排索引」，由 feature-delivery-workflow SKILL 按 phases 顺序逐个执行各阶段文件。
-# 每个阶段的具体步骤拆分到 workflows/feature-delivery/phase-*.yaml，按最小可交付单元组织。
-# Cursor IDE 不自动解析此 YAML。
 name: feature-delivery
-description: 完整功能交付流水线（继承重构全部 + 功能交付专属能力）
+description: 完整功能交付工作流索引
+version: 2
 debug: true
-global_skills:
-  - skills/harness-debug-logger
+entry_mode: flexible
+artifact_root: docs/artifacts/work/{task-id}
+orchestration_skill: skills/feature-delivery-workflow
 
-# 阶段编排：按顺序执行，每个阶段是一个独立的最小工作流文件。
-# rules / agents / global_skills 由本文件统一声明，各阶段文件继承。
-#
-# 灵活入口（支持中途进入）：可指定任意阶段作为起点。进入前检查该阶段的 entry_artifacts：
-#   - 全部存在  → 按顺序从该阶段继续执行（无需询问）
-#   - 存在缺失  → 暂停询问用户：A 补齐上游后按顺序处理 / B 就地从当前阶段开始
-# 详见 skills/feature-delivery-workflow/SKILL.md「灵活入口协议」。
-entry_mode: flexible  # flexible=支持中途进入并在缺输入时询问；strict=缺输入即停止
 phases:
-  - file: workflows/feature-delivery/phase-1-prd-split.yaml
-    description: PRD 功能拆分（含可选 PRD 导入）
-  - file: workflows/feature-delivery/phase-2-brainstorm.yaml
-    description: 需求方案头脑风暴
-  - file: workflows/feature-delivery/phase-3-hld.yaml
-    description: 概要设计 → HLD 一致性审查 → 发布飞书
-  - file: workflows/feature-delivery/phase-4-db-api.yaml
-    description: 数据库设计 → API 契约设计（可并行）
-  - file: workflows/feature-delivery/phase-5-lld.yaml
-    description: 详细设计 → LLD 一致性审查 → 发布飞书
-  - file: workflows/feature-delivery/phase-6-plan.yaml
-    description: 实现计划
-  - file: workflows/feature-delivery/phase-7-code.yaml
-    description: 编码实现 → 规格审查 → 质量审查 → 通用审查
-  - file: workflows/feature-delivery/phase-8-verify-archive.yaml
-    description: 最终验证 → 制品归档
+  - id: requirements
+    description: 拆解 PRD 并形成可交付特性清单
+    agent: null
+    skills: {required: [], on_demand: []}
+    file: workflows/feature-delivery/phase-1-prd-split.yaml
+    entry_artifacts: {required: [], optional: [context/prd-source.md]}
+    exit_artifacts: [analysis/feature-list.md]
+    condition: null
+    next: {on_pass: brainstorm, on_fail: human-checkpoint}
 
-artifact_chain:
-  - step: prd-import
-    optional: true
-    output: docs/artifacts/prd-source.md
-  - step: prd-split
-    input: docs/artifacts/prd-source.md  # 或用户口头需求
-    output: docs/artifacts/feature-list.md
-  - step: brainstorm
-    input: docs/artifacts/feature-list.md
-    output: docs/artifacts/brainstorm-result.md
-  - step: hld
-    input:
-      - docs/artifacts/feature-list.md
-      - docs/artifacts/brainstorm-result.md
-    output: docs/artifacts/hld.md
-  - step: consistency-review-1
-    input:
-      - docs/artifacts/feature-list.md
-      - docs/artifacts/hld.md
-  - step: hld-publish
-    input: docs/artifacts/hld.md
-    output: docs/artifacts/feishu-doc-links.md
-  - step: ddl
-    input: docs/artifacts/hld.md
-    output: docs/artifacts/ddl.md
-  - step: api
-    input: docs/artifacts/hld.md
-    output: docs/artifacts/api-contract.md
-  - step: lld
-    input:
-      - docs/artifacts/hld.md
-      - docs/artifacts/ddl.md
-      - docs/artifacts/api-contract.md
-    output: docs/artifacts/lld.md
-  - step: consistency-review-2
-    input:
-      - docs/artifacts/hld.md
-      - docs/artifacts/ddl.md
-      - docs/artifacts/api-contract.md
-      - docs/artifacts/lld.md
-  - step: lld-publish
-    input: docs/artifacts/lld.md
-    output: docs/artifacts/feishu-doc-links.md
-  - step: plan
-    input: docs/artifacts/lld.md
-    output: docs/artifacts/impl-plan.md
-  - step: code
-    input: docs/artifacts/impl-plan.md
-  - step: verify
-    output: docs/artifacts/verification-report.md
-  - step: archive
-    output: docs/artifacts/archive/{date}-{task}/
+  - id: brainstorm
+    description: 澄清方案分歧并记录关键决策
+    agent: null
+    skills: {required: [], on_demand: []}
+    file: workflows/feature-delivery/phase-2-brainstorm.yaml
+    entry_artifacts: {required: [analysis/feature-list.md], optional: []}
+    exit_artifacts: [design/brainstorm-result.md]
+    condition: null
+    next: {on_pass: hld, on_fail: human-checkpoint}
 
-# 继承 refactoring 全部规则 + 功能交付专属新增；rules/ 已扁平化
+  - id: hld
+    description: 形成概要设计并完成 HLD 门禁
+    agent: null
+    skills: {required: [], on_demand: []}
+    file: workflows/feature-delivery/phase-3-hld.yaml
+    entry_artifacts: {required: [analysis/feature-list.md], optional: [design/brainstorm-result.md]}
+    exit_artifacts: [design/hld.md, quality/gates/hld-design/consistency.md, quality/gates/hld-design/quality-gate.md]
+    condition: null
+    next: {on_pass: db-api, on_fail: human-checkpoint}
+
+  - id: db-api
+    description: 按 HLD 并行完成数据库与 API 设计
+    agent: null
+    skills: {required: [], on_demand: []}
+    file: workflows/feature-delivery/phase-4-db-api.yaml
+    entry_artifacts: {required: [design/hld.md], optional: []}
+    exit_artifacts: [design/ddl.md, design/api-contract.md]
+    condition: 至少一个数据库或 API 设计分支适用
+    next: {on_pass: lld, on_fail: human-checkpoint}
+
+  - id: lld
+    description: 形成详细设计并完成 LLD 门禁
+    agent: null
+    skills: {required: [], on_demand: []}
+    file: workflows/feature-delivery/phase-5-lld.yaml
+    entry_artifacts: {required: [design/hld.md], optional: [design/ddl.md, design/api-contract.md]}
+    exit_artifacts: [design/lld.md, quality/gates/lld-design/consistency.md, quality/gates/lld-design/quality-gate.md]
+    condition: null
+    next: {on_pass: implementation-plan, on_fail: human-checkpoint}
+
+  - id: implementation-plan
+    description: 将详细设计拆分为可执行实现计划
+    agent: null
+    skills: {required: [], on_demand: []}
+    file: workflows/feature-delivery/phase-6-plan.yaml
+    entry_artifacts: {required: [design/lld.md], optional: []}
+    exit_artifacts: [plans/implementation-plan.md]
+    condition: null
+    next: {on_pass: implementation, on_fail: human-checkpoint}
+
+  - id: implementation
+    description: 实施变更并完成实现质量门禁
+    agent: null
+    skills: {required: [], on_demand: []}
+    file: workflows/feature-delivery/phase-7-code.yaml
+    entry_artifacts: {required: [plans/implementation-plan.md], optional: [workflow/decision-log.md]}
+    exit_artifacts: [delivery/change-manifest.md, quality/gates/implementation/quality-gate.md]
+    condition: null
+    next: {on_pass: verify-archive, on_fail: human-checkpoint}
+
+  - id: verify-archive
+    description: 完成最终机械验证并归档任务目录
+    agent: null
+    skills: {required: [], on_demand: []}
+    file: workflows/feature-delivery/phase-8-verify-archive.yaml
+    entry_artifacts: {required: [delivery/change-manifest.md, quality/gates/implementation/quality-gate.md], optional: []}
+    exit_artifacts: [quality/verification-report.md, archive/{date}-{task-id}/]
+    condition: 实现质量门禁最后结论为 PASS
+    next: {on_pass: end, on_fail: human-checkpoint}
+
 rules:
-  always:  # 全局 always 规则，所有工作流共享
-    - rules-loader
-    - stage-contracts
-    - correction-detection
-    - human-checkpoint
-    - java-edit-self-check
-  active:
-    - exceptions
-    - null-safety
-    - logging
-    - method-design
-    - naming
-    - comments
-    - project-architecture
-    - database
-    - api-design
-    - testing
-    - dependencies
-    - collections
-    - concurrency
-    - datetime
-    - pojo
-    - tenant-isolation
-    - git-branch
-    - git-commit
-    - change-implementation
-    - task-decomposition
-    - compile-guard
-    - lint-guard
-    - test-guard
-    - scope-guard
-    - schema-guard
-    - execution-boundary
-    - environment-boundary
-
-agents:
-  # 继承 refactoring
-  - agents/implementer
-  - agents/code-reviewer
-  - agents/memory-consolidator
-  - agents/consistency-reviewer
-  - agents/refactoring-planner
-  - agents/code-quality-reviewer
-  # 功能交付专属
-  - agents/prd-splitter
-  - agents/architect-hld
-  - agents/lld-author
-  - agents/impl-planner
-  - agents/db-ddl
-  - agents/api-contract
-  - agents/spec-reviewer
+  always: [rules-loader, stage-contracts, correction-detection, human-checkpoint, java-edit-self-check]
+  active: [project-architecture, database, api-design, testing, dependencies, collections, concurrency, datetime, pojo, tenant-isolation, git-branch, git-commit, change-implementation, task-decomposition, compile-guard, lint-guard, test-guard, scope-guard, schema-guard, execution-boundary, environment-boundary]

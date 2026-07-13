@@ -1,101 +1,39 @@
-﻿---
+---
 name: done-verify
 description: >-
-  在任务标记完成前强制执行编译、测试、Lint、变更范围与遗留项检查，产出 verification-report.md。
-  在任何工作流收尾阶段、AI 准备声明「已完成」之前使用。
-  不用于任务尚在进行中、仅问答调研无代码变更、中间阶段产物尚未就绪时。
+  执行编译、测试、覆盖率、Lint、静态分析、依赖和范围验证，追加机械证据并形成 quality/verification-report.md。
+  在代码变更进入专项质量审查前采集证据，以及质量门禁 PASS 后做最终验证时使用。
+  不用于语义质量裁决、修改代码以掩盖失败或覆盖历史 Run。
 ---
 
-# 完成前验证检查清单
+# 完成交付验证
 
-## 用途
-在任何任务标记"完成"前，强制执行一套验证检查清单，确保不带遗漏问题交付。该技能是所有工作流收尾阶段的最后一道门禁。
+## 前置条件
 
-## 触发时机
-- 任务即将完成时（AI 准备声明"已完成"之前）
-- 由 workflow YAML 在收尾阶段强制调用，不依赖 AI 自觉
+- 获取 `artifact_root`、变更清单和当前代码 diff。
+- 从项目配置与 Rule 解析可用命令和门禁阈值，不在本 Skill 重复阈值。
 
-## 检查清单
+## 证据采集
 
-### 第一关：编译检查
-- [ ] 项目编译通过，无编译错误
-- [ ] 无新增的编译警告（或已记录为已知问题）
-- **失败处理**：停止后续检查，回退给 implementer 修复编译问题
+依次执行适用于当前项目的检查，并追加到：
 
-### 第二关：测试检查
-- [ ] 所有已有单元测试通过
-- [ ] 所有已有集成测试通过
-- [ ] 新增功能有对应的测试用例
-- [ ] 已接入 JaCoCo check 的项目：变更模块执行 `mvn verify` 通过（行覆盖 ≥ 78%，分支覆盖 ≥ 65%）
-- [ ] 未接入 JaCoCo 的项目：至少执行 `mvn test` 通过，并记录须按 `docs/templates/maven-test-coverage-integration.md` 接入
-- [ ] 无 `@Disabled` 绕过失败测试
-- **失败处理**：停止后续检查，回退给 implementer 修复失败的测试或补覆盖率
+- `quality/evidence/implementation/compile-report.md`
+- `quality/evidence/implementation/test-report.md`
+- `quality/evidence/implementation/coverage-report.md`
+- `quality/evidence/implementation/lint-report.md`
+- `quality/evidence/implementation/static-analysis-report.md`
+- `quality/evidence/implementation/dependency-scan-report.md`
 
-### 第三关：Lint / 静态分析检查
-- [ ] 无新增 Lint 错误
-- [ ] 无新增 Lint 警告（或已审议忽略）
-- [ ] 静态分析工具（如 SpotBugs、SonarLint）无新增问题
-- **失败处理**：回退给 implementer 修复 Lint 问题
+每次执行追加 `Run NNN`，记录基线、命令、结果、摘要和完整报告位置；禁止覆盖历史 Run。无对应工具时记录 `NOT_AVAILABLE` 及原因，不伪造 PASS。
 
-### 第四关：变更范围检查
-- [ ] `git diff` 中每行改动都能追溯到任务需求
-- [ ] 无无关的格式化变更
-- [ ] 无无关的重构变更
-- [ ] 无意外修改的公共模块
-- **失败处理**：要求 implementer 回退无关改动或提供合理解释
+## 最终验证
 
-### 第五关：遗留项检查
-- [ ] 代码中无新增 `TODO`、`FIXME`、`HACK` 注释（或已记录到跟踪系统）
-- [ ] 无调试用途的临时代码（`System.out.println`、`console.log`、硬编码测试数据等）
-- [ ] 无被注释掉的代码块
-- **失败处理**：回退给 implementer 清理遗留项
+1. 确认当前 gate 的 `quality-gate.md` 最后结论为 PASS。
+2. 重新执行受变更影响的机械检查。
+3. 校验变更清单与 diff、任务范围和归档必需制品。
+4. 追加 `{artifact_root}/quality/verification-report.md`，结论为 PASS 或 FAIL。
+5. FAIL 时不得归档为完成。
 
-### 第六关：制品完整性检查
-- [ ] 所有上游制品（PRD/HLD/LLD/DDL/API）与最终代码一致
-- [ ] `docs/artifacts/decision-log.md` 已记录所有人工决策
-- [ ] `docs/artifacts/harness-debug.md` 日志完整
-- [ ] 审查报告已归档
-- **失败处理**：补齐缺失制品后重新验证
+## 关联 Rule
 
-### 第七关：安全检查
-- [ ] 无硬编码的密钥、密码、Token
-- [ ] 无敏感信息泄露（日志中不输出密码/身份证等）
-- [ ] SQL 参数化，无拼接注入风险
-- [ ] 用户输入有校验，无 XSS/注入向量
-- **失败处理**：回退给 implementer 修复安全问题（阻塞级别）
-
-### 第八关：规则交叉引用检查（仅当变更含 `.cursor/rules/**/*.mdc` 时）
-- [ ] 运行检查脚本通过（Windows: `.cursor/scripts/check-rule-cross-refs.ps1`；macOS/Linux: `bash .cursor/scripts/check-rule-cross-refs.sh`）
-- [ ] 新增规则已在 `rules-loader.mdc` 场景表登记（如需组合加载）
-- **失败处理**：移除叶子规则中的跨文件引用，或改在 loader 场景表并列加载
-
-## 输出
-
-验证通过时：
-```
-## 完成前验证 — 通过
-- **时间**: YYYY-MM-DD HH:mm:ss
-- **任务**: {task-name}
-- **检查项**: 7/7 全部通过
-- **状态**: 可进入归档阶段
-```
-
-验证不通过时：
-```
-## 完成前验证 — 未通过
-- **时间**: YYYY-MM-DD HH:mm:ss
-- **任务**: {task-name}
-- **通过**: N/7
-- **失败项**:
-  - 第 N 关 {关卡名}: {失败原因摘要}
-- **处理**: 回退给 {agent} 修复
-```
-
-## 与 feedback 层规则的关系
-本技能负责**编排何时检查、按什么顺序检查**；具体的检查标准由 feedback 层门禁规则定义（compile-guard、test-guard、lint-guard、scope-guard，通过 loader 或 alwaysApply 自动加载）。
-
-## 关键约束
-- 检查顺序固定，前序关卡未通过时不执行后续关卡（快速失败）
-- 每个关卡的失败都会生成一条 harness-debug.md 日志
-- 安全检查为阻塞级别，不可跳过
-- 验证结果写入 `docs/artifacts/verification-report.md`
+遵守 `compile-guard`、`test-guard`、`lint-guard`、`scope-guard`、`schema-guard` 和 `environment-boundary`。

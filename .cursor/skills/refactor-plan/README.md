@@ -6,7 +6,7 @@
 
 只读分析目标代码，识别坏味道、为每种坏味道选择对应的重构手法、拆分为可独立验证可回滚的原子步骤，最终输出一份详细到 `implementer` 可直接逐步执行的重构计划。本技能**不修改任何代码**。
 
-- 主要产出：**`docs/artifacts/refactoring-plan.md`**
+- 主要产出：**`{artifact_root}/plans/refactoring-plan.md`**
 - 下游：`safe-refactoring`（按计划逐步执行）
 
 ## 适用场景
@@ -28,7 +28,7 @@
 
 | 文件 | 说明 |
 |------|------|
-| `docs/artifacts/refactoring-plan.md` | 概要、坏味道清单、重构步骤表、风险评估、明确排除项 |
+| `{artifact_root}/plans/refactoring-plan.md` | 概要、坏味道清单、重构步骤表、风险评估、明确排除项 |
 
 ## 关键约束
 

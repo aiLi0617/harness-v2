@@ -6,7 +6,7 @@
 
 在根因确认后进入修复阶段，按 4 个步骤保证修复的正确性与不引入回归：编写失败测试 → 实施最小修复 → 运行全量回归 → 审视修复代码质量。
 
-- 上游：`systematic-debug` / `bug-analyst` 产出的 `docs/artifacts/root-cause.md`
+- 上游：`systematic-debug` / `problem-analyst` 产出的 `{artifact_root}/analysis/root-cause.md`
 
 ## 适用场景
 
@@ -15,7 +15,7 @@
 
 ## 前置条件
 
-- `docs/artifacts/root-cause.md` 存在且内容完整（含根因位置、触发条件、建议修复方向）
+- `{artifact_root}/analysis/root-cause.md` 存在且内容完整（含根因位置、触发条件、建议修复方向）
 - 项目测试框架可正常运行（JUnit / TestNG 等）
 
 ## 执行流程

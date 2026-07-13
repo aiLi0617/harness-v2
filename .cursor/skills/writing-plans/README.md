@@ -6,8 +6,8 @@
 
 从 `lld.md` 提取需要实现的类、方法、配置，拆分为可独立验证的子任务，标注依赖关系、判定并行度、定义每个子任务的验证方式，最终输出实现计划。本技能为计划编排，**不执行实际编码**。
 
-- 主要产出：**`docs/artifacts/impl-plan.md`**
-- 上游：`lld-author` 产出的 `lld.md`
+- 主要产出：**`{artifact_root}/plans/implementation-plan.md`**
+- 上游：`detail-designer` 产出的 `lld.md`
 - 下游：`implementer`（按计划编码）
 
 ## 适用场景
@@ -17,8 +17,8 @@
 
 ## 前置条件
 
-- `docs/artifacts/lld.md` 必须存在（不存在则停止并报告缺失）
-- `docs/artifacts/hld.md` 建议存在（参考用）
+- `{artifact_root}/design/lld.md` 必须存在（不存在则停止并报告缺失）
+- `{artifact_root}/design/hld.md` 建议存在（参考用）
 
 ## 执行流程
 
@@ -34,7 +34,7 @@
 
 | 文件 | 说明 |
 |------|------|
-| `docs/artifacts/impl-plan.md` | 子任务清单、依赖关系图、并行策略、执行顺序、风险 |
+| `{artifact_root}/plans/implementation-plan.md` | 子任务清单、依赖关系图、并行策略、执行顺序、风险 |
 
 ## 关键约束
 
@@ -47,5 +47,5 @@
 | 资源 | 关系 |
 |------|------|
 | [`git-worktree`](../git-worktree/SKILL.md) | 并行度≥2 时的并行开发执行 |
-| `impl-planner` | 调度本技能的代理 |
+| `implementation-planner` | 调度本技能的代理 |
 | `feature-delivery-workflow` | 工作流阶段⑥调度本技能 |

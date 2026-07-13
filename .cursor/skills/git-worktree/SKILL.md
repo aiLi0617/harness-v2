@@ -12,7 +12,7 @@ description: >-
 当实现计划中存在多个可并行的子任务时，使用 git worktree 创建隔离的工作目录，让多个子代理各自在独立分支上并行开发，避免分支切换冲突和文件覆盖。
 
 ## 触发时机
-- 实现计划（`docs/artifacts/impl-plan.md`）中识别出 2 个以上可并行子任务
+- 实现计划（`{artifact_root}/plans/implementation-plan.md`）中识别出 2 个以上可并行子任务
 - 由 workflow YAML 在"派发并行任务"步骤显式调用
 - 手动场景：用户明确要求并行开发多个子任务
 
@@ -25,7 +25,7 @@ description: >-
 
 ### 1. 评估并行可行性
 
-从 `docs/artifacts/impl-plan.md` 中提取子任务列表，逐对检查文件依赖：
+从 `{artifact_root}/plans/implementation-plan.md` 中提取子任务列表，逐对检查文件依赖：
 
 ```
 子任务 A 修改文件集: {fileA1, fileA2, ...}
@@ -65,7 +65,7 @@ git worktree add ../worktree-task-2 -b feature/user-registration/task-2-controll
 
 每个并行 agent 在各自的 worktree 目录中工作：
 
-- 读取共享制品（从主仓库的 `docs/artifacts/` 中读取，路径需调整为绝对路径或相对路径 `../../主仓库/docs/artifacts/`）
+- 读取共享制品（从主仓库的 `{artifact_root}/` 中读取，路径需调整为绝对路径或相对路径 `../../主仓库/{artifact_root}/`）
 - 执行各自的子任务
 - 写入独立的调试日志（`harness-debug-worker-{N}.md`）
 - 完成后在各自分支提交
@@ -115,8 +115,8 @@ git branch -d feature/{feature-slug}/task-2-controller
 ```
 
 ## 调试日志约定
-- 各并行 agent 写入 `docs/artifacts/harness-debug-worker-{N}.md`
-- 收尾阶段将所有 worker 日志按时间戳排序合并入 `docs/artifacts/harness-debug.md`
+- 各并行 agent 写入 `{artifact_root}/workflow/harness-debug-worker-{N}.md`
+- 收尾阶段将所有 worker 日志按时间戳排序合并入 `{artifact_root}/workflow/harness-debug.md`
 - 合并后删除 worker 级日志文件
 
 ## 异常处理

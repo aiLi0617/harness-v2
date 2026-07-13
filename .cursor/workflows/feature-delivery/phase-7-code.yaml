@@ -1,52 +1,115 @@
-# feature-delivery 工作流 · 阶段 7：编码实现 → 规格审查 → 质量审查 → 通用审查
-# 由 feature-delivery-workflow SKILL 按 feature-delivery.yaml 的 phases 顺序编排执行。
-# Cursor IDE 不自动解析此 YAML。rules / agents / global_skills 继承 feature-delivery.yaml。
-name: feature-delivery/phase-7-code
-description: 按计划编码并依次通过三道审查闭环
-phase: 7
-entry_artifacts:
-  - docs/artifacts/impl-plan.md
-  - docs/artifacts/lld.md  # 供规格审查比对
-exit_artifacts:
-  - 源代码
-  - 审查报告（spec / quality / code）
-prev_phase: feature-delivery/phase-6-plan
-next_phase: feature-delivery/phase-8-verify-archive
-
+id: implementation
+description: 编码、机械证据、风险路由和多模型质量门禁
+execution: {mode: mixed, join: all}
 steps:
-  - name: code
-    description: 编码实现
+  - id: implementation
+    description: 按实现计划编码和测试
     agent: agents/implementer
-    on_demand_skill: skills/codegen-guard  # 新建文件场景由 implementer 按需调用
-    actions:
-      - 读取 impl-plan.md
-      - 按子任务逐项实现
-      - 涉及新建文件时先调用 codegen-guard 守卫
-      - 每个子任务完成后运行测试
-
-  - name: spec-review
-    description: 规格审查
-    agent: agents/spec-reviewer
-    review_loop:
-      max_rounds: 5
-      on_failure: 回退给 implementer 修复
-      on_exhausted: 标记人工介入，暂停流程
-    actions:
-      - 读取 lld.md + 实际代码
-      - 校验代码是否按 LLD 设计实现
-
-  - name: quality-review
-    description: 质量审查
-    agent: agents/code-quality-reviewer
-    review_loop:
-      max_rounds: 5
-      on_failure: 回退给 implementer 修复
-      on_exhausted: 标记人工介入，暂停流程
-
-  - name: code-review
-    description: 通用代码审查
-    agent: agents/code-reviewer
-    review_loop:
-      max_rounds: 5
-      on_failure: 回退给 implementer 修复
-      on_exhausted: 标记人工介入，暂停流程
+    skills: {required: [], on_demand: [skills/codegen-guard, skills/git-worktree]}
+    entry_artifacts: {required: [plans/implementation-plan.md], optional: [workflow/decision-log.md]}
+    exit_artifacts: [delivery/change-manifest.md]
+    condition: null
+    next: {on_pass: evidence, on_fail: human-checkpoint}
+  - id: evidence
+    description: 采集机械质量证据
+    agent: null
+    skills: {required: [skills/done-verify], on_demand: []}
+    entry_artifacts: {required: [delivery/change-manifest.md], optional: []}
+    exit_artifacts: [quality/evidence/implementation/compile-report.md, quality/evidence/implementation/test-report.md]
+    condition: null
+    next: {on_pass: review-routing, on_fail: implementation}
+  - id: review-routing
+    description: 根据变更和制品生成质量风险路由
+    agent: null
+    skills: {required: [skills/quality-review-routing], on_demand: []}
+    entry_artifacts: {required: [delivery/change-manifest.md], optional: [design/hld.md, design/ddl.md, design/api-contract.md, design/lld.md]}
+    exit_artifacts: [workflow/review-routing.md]
+    condition: null
+    next: {on_pass: implementation-quality, on_fail: human-checkpoint}
+  - id: static-analysis-review
+    description: 解释静态分析证据
+    agent: agents/static-analysis-reviewer
+    parallel_group: implementation-quality
+    skills: {required: [], on_demand: []}
+    entry_artifacts: {required: [workflow/review-routing.md], optional: []}
+    exit_artifacts: [quality/gates/implementation/static-analysis.md]
+    condition: always
+    next: {on_pass: implementation-quality.join, on_fail: implementation-quality.join, on_skip: implementation-quality.join}
+  - id: logic-correctness-review
+    description: 审查逻辑与规格正确性
+    agent: agents/logic-correctness-reviewer
+    parallel_group: implementation-quality
+    skills: {required: [], on_demand: []}
+    entry_artifacts: {required: [design/lld.md, delivery/change-manifest.md], optional: [analysis/feature-list.md]}
+    exit_artifacts: [quality/gates/implementation/logic-correctness.md]
+    condition: always
+    next: {on_pass: implementation-quality.join, on_fail: implementation-quality.join, on_skip: implementation-quality.join}
+  - id: maintainability-review
+    description: 审查可维护性
+    agent: agents/maintainability-reviewer
+    parallel_group: implementation-quality
+    skills: {required: [], on_demand: []}
+    entry_artifacts: {required: [delivery/change-manifest.md], optional: []}
+    exit_artifacts: [quality/gates/implementation/maintainability.md]
+    condition: always
+    next: {on_pass: implementation-quality.join, on_fail: implementation-quality.join, on_skip: implementation-quality.join}
+  - id: test-adequacy-review
+    description: 审查测试充分性
+    agent: agents/test-adequacy-reviewer
+    parallel_group: implementation-quality
+    skills: {required: [], on_demand: []}
+    entry_artifacts: {required: [design/lld.md, delivery/change-manifest.md], optional: [analysis/feature-list.md]}
+    exit_artifacts: [quality/gates/implementation/test-adequacy.md]
+    condition: always
+    next: {on_pass: implementation-quality.join, on_fail: implementation-quality.join, on_skip: implementation-quality.join}
+  - id: security-review
+    description: 审查安全风险
+    agent: agents/security-reviewer
+    parallel_group: implementation-quality
+    skills: {required: [], on_demand: []}
+    entry_artifacts: {required: [workflow/review-routing.md], optional: [design/api-contract.md]}
+    exit_artifacts: [quality/gates/implementation/security.md]
+    condition: 路由命中 API、鉴权、权限、输入、敏感数据或依赖
+    next: {on_pass: implementation-quality.join, on_fail: implementation-quality.join, on_skip: implementation-quality.join}
+  - id: data-concurrency-review
+    description: 审查数据与并发风险
+    agent: agents/data-concurrency-reviewer
+    parallel_group: implementation-quality
+    skills: {required: [], on_demand: [skills/mcp-db, skills/mcp-dbx]}
+    entry_artifacts: {required: [workflow/review-routing.md], optional: [design/ddl.md]}
+    exit_artifacts: [quality/gates/implementation/data-concurrency.md]
+    condition: 路由命中数据库、事务、缓存、MQ、Job、异步或并发
+    next: {on_pass: implementation-quality.join, on_fail: implementation-quality.join, on_skip: implementation-quality.join}
+  - id: diagnosability-review
+    description: 审查生产可排查性
+    agent: agents/diagnosability-reviewer
+    parallel_group: implementation-quality
+    skills: {required: [], on_demand: []}
+    entry_artifacts: {required: [workflow/review-routing.md], optional: []}
+    exit_artifacts: [quality/gates/implementation/diagnosability.md]
+    condition: 路由命中日志、异常、远程调用、Job、MQ 或线上链路
+    next: {on_pass: implementation-quality.join, on_fail: implementation-quality.join, on_skip: implementation-quality.join}
+  - id: consistency-review
+    description: 审查需求、设计、计划和代码一致性
+    agent: agents/consistency-reviewer
+    parallel_group: implementation-quality
+    skills: {required: [], on_demand: []}
+    entry_artifacts: {required: [analysis/feature-list.md, design/hld.md, design/lld.md, plans/implementation-plan.md, delivery/change-manifest.md], optional: [design/ddl.md, design/api-contract.md]}
+    exit_artifacts: [quality/gates/implementation/consistency.md]
+    condition: always
+    next: {on_pass: implementation-quality.join, on_fail: implementation-quality.join, on_skip: implementation-quality.join}
+  - id: quality-gate
+    description: 汇总专项报告并形成唯一门禁结论
+    agent: agents/quality-gate-reviewer
+    skills: {required: [], on_demand: []}
+    entry_artifacts: {required: [workflow/review-routing.md, quality/gates/implementation/static-analysis.md, quality/gates/implementation/logic-correctness.md, quality/gates/implementation/maintainability.md, quality/gates/implementation/test-adequacy.md, quality/gates/implementation/consistency.md], optional: [quality/gates/implementation/security.md, quality/gates/implementation/data-concurrency.md, quality/gates/implementation/diagnosability.md]}
+    exit_artifacts: [quality/gates/implementation/quality-gate.md]
+    condition: parallel_group implementation-quality join 完成且全部应到报告存在
+    review_loop: {max_attempts: 5, fix_target: implementation, on_exhausted: human-checkpoint}
+    next: {on_pass: end, on_fail: implementation, on_human_required: human-checkpoint}
+parallel_groups:
+  implementation-quality:
+    execution: {mode: parallel, join: all}
+    members: [static-analysis-review, logic-correctness-review, maintainability-review, test-adequacy-review, security-review, data-concurrency-review, diagnosability-review, consistency-review]
+    routing_artifact: workflow/review-routing.md
+    join_target: quality-gate

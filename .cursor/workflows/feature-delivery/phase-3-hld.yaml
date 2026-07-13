@@ -1,42 +1,37 @@
-# feature-delivery 工作流 · 阶段 3：概要设计 → HLD 一致性审查 → 发布飞书
-# 由 feature-delivery-workflow SKILL 按 feature-delivery.yaml 的 phases 顺序编排执行。
-# Cursor IDE 不自动解析此 YAML。rules / agents / global_skills 继承 feature-delivery.yaml。
-name: feature-delivery/phase-3-hld
-description: 产出概要设计、通过一致性审查并发布飞书等待人工确认
-phase: 3
-entry_artifacts:
-  - docs/artifacts/feature-list.md
-  - docs/artifacts/brainstorm-result.md
-exit_artifacts:
-  - docs/artifacts/hld.md
-  - docs/artifacts/feishu-doc-links.md
-prev_phase: feature-delivery/phase-2-brainstorm
-next_phase: feature-delivery/phase-4-db-api
-
+id: hld
+description: 产出 HLD 并通过设计一致性门禁
+execution: {mode: sequential, join: all}
 steps:
-  - name: hld
-    description: 概要设计
-    agent: agents/architect-hld
-    actions:
-      - 读取 feature-list.md + brainstorm-result.md
-      - 输出模块划分、接口概览、数据流到 docs/artifacts/hld.md
-
-  - name: consistency-review-1
-    description: HLD 一致性审查
+  - id: hld-authoring
+    description: 产出模块级概要设计
+    agent: agents/solution-architect
+    skills: {required: [], on_demand: [skills/brainstorming]}
+    entry_artifacts: {required: [analysis/feature-list.md], optional: [design/brainstorm-result.md, workflow/decision-log.md]}
+    exit_artifacts: [design/hld.md]
+    condition: null
+    next: {on_pass: hld-consistency, on_fail: human-checkpoint}
+  - id: hld-consistency
+    description: 审查功能清单与 HLD 一致性
     agent: agents/consistency-reviewer
-    review_loop:
-      max_rounds: 5
-      on_failure: 回退给 architect-hld 修正
-      on_exhausted: 标记人工介入，暂停流程
-    actions:
-      - 读取 feature-list.md + hld.md
-      - 校验每个功能点是否都有对应模块
-      - 校验 HLD 是否引入了功能清单没有的内容
-
-  - name: hld-publish
-    description: HLD 发布飞书 & 人工确认
-    skill: skills/hld-to-feishu
-    actions:
-      - 将 docs/artifacts/hld.md 发布到飞书云文档，链接记录到 feishu-doc-links.md
-      - 等待人工审阅确认（阻塞）
-      - 确认通过后进入下一阶段；需修改则回退给 architect-hld 后重新发布
+    skills: {required: [], on_demand: []}
+    entry_artifacts: {required: [analysis/feature-list.md, design/hld.md], optional: []}
+    exit_artifacts: [quality/gates/hld-design/consistency.md]
+    condition: null
+    next: {on_pass: hld-quality-gate, on_fail: hld-quality-gate}
+  - id: hld-quality-gate
+    description: 裁决 HLD 设计门禁
+    agent: agents/quality-gate-reviewer
+    skills: {required: [], on_demand: []}
+    entry_artifacts: {required: [quality/gates/hld-design/consistency.md], optional: []}
+    exit_artifacts: [quality/gates/hld-design/quality-gate.md]
+    condition: null
+    review_loop: {max_attempts: 5, fix_target: hld-authoring, on_exhausted: human-checkpoint}
+    next: {on_pass: publish-hld, on_fail: hld-authoring, on_human_required: human-checkpoint}
+  - id: publish-hld
+    description: 按需发布 HLD
+    agent: null
+    skills: {required: [], on_demand: [skills/hld-to-feishu]}
+    entry_artifacts: {required: [design/hld.md, quality/gates/hld-design/quality-gate.md], optional: []}
+    exit_artifacts: [delivery/publication-links.md]
+    condition: 用户要求发布飞书
+    next: {on_pass: end, on_skip: end, on_fail: human-checkpoint}

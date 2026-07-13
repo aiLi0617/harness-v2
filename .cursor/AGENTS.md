@@ -1,216 +1,92 @@
-﻿# Harness 工程 - 顶层代理指令
+# Cursor Harness 资源约定
 
-## 架构概述
+## 领域边界
 
-本项目是 **Harness v2** 配置仓：`Agent = Model + Harness`。所有 AI 代理必须遵守以下五类资源与三工作流体系。
+- Agent = WHO + WHAT + CONTRACT + ROLE POLICY。
+- Skill = REUSABLE / OPTIONAL / COMPLEX HOW。
+- Workflow = WHEN + ORDER + BINDING + STATE。
+- Rule = ALWAYS-APPLICABLE CONSTRAINT。
 
-| 资源 | 路径 | 数量 | 加载方式 |
-|------|------|------|----------|
-| Rules | `.cursor/rules/` | 49 通用 + 13 broker 特化 | 被动，globs / alwaysApply |
-| Skills | `.cursor/skills/` | 16 | 主动，任务触发 |
-| Agents | `.cursor/agents/` | 16 | 工作流调度 |
-| Workflows | `.cursor/workflows/` | 3 主流程 + 8 阶段文件 | 用户触发 |
-| MCP | `skills/mcp-switch/` + `skills/mcp-install/` | 11 注册服务 | init-mcp / switch 生成 |
+Agent 不必机械配对 Skill。Agent 正文只保留角色、权限、输入语义、输出内容
+要求、完成标准、Skill 调用条件和禁止事项；完整方法、命令、模板及工具步骤
+放入 Skill。阶段顺序、并行、回退和人工检查点只放入 Workflow。
 
-### Rules（`.cursor/rules/`）
+## Agent
 
-自 2026-06 起已扁平化，所有 `.mdc` 直接位于 `rules/` 根。语义四层（非目录结构）：
+业务与治理 Agent：
 
-- **记忆层**（编码规范，约 28 条）：命名、异常、日志、空值、API、数据库、测试等
-- **编排层**（约 6 条）：Git、变更实施、任务拆解、阶段契约、规则加载器
-- **反馈层**（约 9 条）：编译/Lint/测试门禁、Java 编辑自检、Schema、纠正检测、人工检查点
-- **执行层**（2 条）：操作红线、环境边界
+`issue-context-fetcher`、`log-investigator`、`requirements-analyst`、
+`problem-analyst`、`solution-architect`、`database-designer`、`api-designer`、
+`detail-designer`、`implementation-planner`、`refactoring-planner`、
+`implementer`、`memory-consolidator`。
 
-`rules/projects/<project>/` 存放项目特化规则（当前内置 broker 13 条），靠 `<project>-` 前缀 + `globs` 锁定范围。详见 `rules-loader.mdc`。
+质量委员会：
 
-### Skills（`.cursor/skills/`）
+`static-analysis-reviewer`、`logic-correctness-reviewer`、
+`maintainability-reviewer`、`diagnosability-reviewer`、
+`consistency-reviewer`、`security-reviewer`、`test-adequacy-reviewer`、
+`data-concurrency-reviewer`、`quality-gate-reviewer`。
 
-每个 skill 位于 `skills/<skill-name>/SKILL.md`：
+质量 Agent 默认省略 `model`。专项 Reviewer 只写自己的报告；
+`quality-gate-reviewer` 在所有应到报告完成后追加唯一裁决。
 
-| 场景 | 技能 |
-|------|------|
-| 共享 | `harness-debug-logger` `done-verify` `git-worktree` `codegen-guard` |
-| Bug 修复 | `systematic-debug` `tdd-bugfix` |
-| 重构 | `refactor-plan` `safe-refactoring` |
-| 功能交付 | `brainstorming` `writing-plans` `feature-delivery-workflow` `hld-to-feishu` `lld-to-feishu` |
-| MCP | `mcp-switch` `mcp-install` `mcp-db` `mcp-dbx` |
+## Workflow
 
-### Agents（`.cursor/agents/`）
+用户入口固定为 `bugfix`、`refactoring`、`feature-delivery`。所有步骤统一声明：
 
-| 场景 | 代理 |
-|------|------|
-| 共享 | `implementer` `code-reviewer` `memory-consolidator` `consistency-reviewer` |
-| Bug 修复 | `bug-analyst` `ones-issue-fetcher` `loki-log-investigator` |
-| 重构 | `refactoring-planner` `code-quality-reviewer` |
-| 功能交付 | `prd-splitter` `architect-hld` `db-ddl` `api-contract` `lld-author` `impl-planner` `spec-reviewer` |
+- `id`、`description`、`agent`
+- `skills.required`、`skills.on_demand`
+- `entry_artifacts.required`、`entry_artifacts.optional`
+- `exit_artifacts`、`condition`
+- `next.on_pass`、`next.on_fail`
 
-### Workflows（`.cursor/workflows/`）
+资源可以为空，但结构不得省略。路径相对 Workflow 的 `artifact_root`。默认
+串行；并行阶段显式使用 `execution.mode: parallel` 和
+`execution.join: all`。审查循环必须声明最大次数、修复目标和耗尽后的人工
+检查点。
 
-- `bugfix.yaml` — Bug 修复（最小集）
-- `refactoring.yaml` — 代码重构（扩展 Bug 修复）
-- `feature-delivery.yaml` — 功能交付编排索引 + `feature-delivery/phase-1..8.yaml`
+### parallel_group fan-out / join
 
-### MCP（mcp-switch 技能体系）
+- `next.on_pass` 指向 `parallel_groups` 中的 group ID 时，Workflow 主会话必须对
+  `members` 做 fan-out，不能只启动第一个成员。
+- `routing_artifact` 决定条件成员是否启动；必跑成员始终启动，未触发的条件成员
+  记录为 `SKIPPED`，不得伪造专项报告。
+- 每个已启动成员独占自己的输出文件，并把终态发送到 `{group-id}.join`。
+- `execution.join: all` 要求所有成员达到 `PASSED`、`FAILED` 或 `SKIPPED`；
+  运行中、缺失或未知状态均不得解锁 `join_target`。
+- `join_target` 只能在全部应到报告存在后启动。专项成员失败仍先完成 join，再由
+  `quality-gate-reviewer` 基于报告中的 BLOCKER 作最终裁决。
+- fan-out、条件跳过、成员终态和 join 结果必须追加到 `workflow/workflow-state.md`
+  与 `workflow/harness-debug.md`。
 
-| 文件 | 作用 |
-|------|------|
-| `skills/mcp-switch/mcp-registry.json` | MCP 服务启动模板 |
-| 业务项目 `.cursor/mcp-workspace/mcp.workspace.json` | 环境、项目 path、profile servers（链接时复制，每项目独立） |
-| 业务项目 `.cursor/mcp-workspace/mcp.workspace.secrets.json` | 密钥（链接时从 example 复制，勿提交 Git） |
+### 主会话生产制品
 
-生成流程：`init-mcp.ps1` / `switch-all-mcp-profiles.ps1` → 写入 `~/.cursor/mcp.json`。规范见 `rules/mcp.mdc`。
+- `context/repository-context.md` 由 `refactoring-planner` 生产，不得由初始化步骤
+  临时拼装。
+- `workflow/review-routing.md` 由主会话加载 `quality-review-routing` Skill 生产；
+  没有该 Skill 或输入与实际 diff 不一致时必须停止。
 
-### 其他
+## 制品与质量协议
 
-- **Scripts**（`.cursor/scripts/`）：规则交叉引用校验等
-- **Plugins**（`.cursor/plugins/feature-list.md`）：第三方插件安装清单
+所有新任务写入 `docs/artifacts/work/{task-id}/`，按 `context`、`analysis`、
+`design`、`plans`、`delivery`、`quality`、`workflow` 分类。禁止把活动制品
+写到 `docs/artifacts/` 根目录，也禁止修改既有 `archive/` 内容。
 
-> **项目特化资源**：通用层扁平挂在 `rules/`、`skills/`、`agents/` 根；业务定制收纳于各目录下 `projects/<project>/`，由 `globs` 或 workflow 显式引用。
+专项报告按门禁阶段写入 `quality/gates/{gate-id}/`。首次为 `Check 001`，
+复审在原文件追加后续 Check，引用原问题 ID 并标记 `RESOLVED`、
+`STILL_OPEN` 或 `REGRESSED`。最后一个完整 Check 是当前有效结论。
 
-## 核心原则
+所有实现变更必跑静态分析、逻辑正确性、可维护性和测试充分性审查；安全、
+数据并发、可排查性及跨制品一致性由 `workflow/review-routing.md` 按风险触发。
+最终结论只允许 `PASS`、`FAIL`、`HUMAN_REQUIRED`。
 
-1. **渐进式信息披露**：按需获取上下文，不要一次性读取整个项目
-2. **沙箱隔离**：代码变更在 feature 分支进行，禁止直接改主分支
-3. **仓库即真理来源**：规范、决策、状态以文件形式持久化，不依赖对话记忆
-4. **机械化执行约束**：遵守 `rules/`，不依赖口头指示
-5. **全局调试日志**：除非 workflow 设置 `debug: false`，每步调用 `harness-debug-logger`
-6. **规则优先于参考实现**：Java 编码以已加载 rules 为准；同模块已有代码仅可参考分层与命名风格（见 `change-implementation`、`java-edit-self-check`）
+## 修改规则
 
-## 接入业务项目
+新增或调整 Agent、Skill、Rule 时必须加载 `harness-resource-authoring`，按对应
+模板确认领域归属、frontmatter、引用和资源数量。Rule 必须使用“适用范围、
+强制规则、验证清单”结构，禁止新增“补充规则”兜底章节。
 
-在业务项目根目录执行 `link-cursor-config.ps1` / `.sh`：
-
-| 方式 | 资源 |
-|------|------|
-| **软链**（目录） | `.cursor/agents` `rules` `skills` `workflows` `scripts` `plugins`，`docs/` |
-| **软链/硬链**（文件） | `.cursor/AGENTS.md`、`.cursor/CLAUDE.md`（Windows 硬链，Unix 软链） |
-| **复制**（每项目独立） | `.cursor/mcp-workspace/mcp.workspace.json`、`.cursor/mcp-workspace/mcp.workspace.secrets.json` |
-
-链接后配置 MCP：
-
-1. 编辑 `.cursor/mcp-workspace/mcp.workspace.json`（`projects.local.path` 等）
-2. 编辑 `.cursor/mcp-workspace/mcp.workspace.secrets.json`（密钥）
-3. `powershell -File .cursor/skills/mcp-install/scripts/init-mcp.ps1 -Profile dev`
-4. 日常切换：`switch-all-mcp-profiles.ps1 dev|sit|pre`
-
-升级 harness：在 harness 仓 `git pull`，业务项目软链自动生效；`mcp-workspace/` 为本地副本，不被覆盖（除非 `-Force`）。
-
-## 三个工作流（渐进包含）
-
-### 工作流 1：Bug 修复
-
-定义：`.cursor/workflows/bugfix.yaml`
-
-```
-触发 → 复现 Bug → 根因分析 → 编写修复 → 审查 → 验证 → 归档
-```
-
-| 资源类型 | 使用的资源 |
-|---------|-----------|
-| Agents | `implementer` `code-reviewer` `memory-consolidator` `bug-analyst` `ones-issue-fetcher` `loki-log-investigator` |
-| Skills | `harness-debug-logger` `done-verify` `systematic-debug` `tdd-bugfix` |
-| Rules always | `rules-loader` `stage-contracts` `correction-detection` `human-checkpoint` `java-edit-self-check` |
-| Rules active | `exceptions` `null-safety` `logging` `git-branch` `git-commit` `compile-guard` `lint-guard` `test-guard` `execution-boundary` `environment-boundary` |
-| MCP | `ones-mcp`（ONES 缺陷时）、`loki-mcp`（可选） |
-
-### 工作流 2：代码重构
-
-定义：`.cursor/workflows/refactoring.yaml`
-
-```
-触发 → 代码分析 → 制定方案 → 逐步重构 → 回归验证 → 质量审查 → 通用审查 → 验证 → 归档
-```
-
-继承 Bug 修复全部资源，新增：
-
-| 资源类型 | 新增资源 |
-|---------|---------|
-| Agents | `refactoring-planner` `code-quality-reviewer` |
-| Skills | `refactor-plan` `safe-refactoring`（`codegen-guard` 由 implementer 按需调用） |
-| Rules | + `method-design` `naming` `comments` `change-implementation` `scope-guard` |
-
-### 工作流 3：功能交付
-
-定义：`.cursor/workflows/feature-delivery.yaml`（`entry_mode: flexible`）
-
-```
-[可选: 云文档导入] → 功能拆分 → 头脑风暴 → 概要设计 → [一致性审查] → [HLD→飞书]
-  → DDL/API → 详细设计 → [一致性审查] → [LLD→飞书] → 实现计划 → 编码
-  → [规格审查] → [质量审查] → [通用审查] → 验证 → 收尾
-```
-
-继承重构全部资源，新增：
-
-| 资源类型 | 新增资源 |
-|---------|---------|
-| Agents | `prd-splitter` `architect-hld` `lld-author` `impl-planner` `db-ddl` `api-contract` `spec-reviewer` `consistency-reviewer` |
-| Skills | `brainstorming` `writing-plans` `feature-delivery-workflow` `hld-to-feishu` `lld-to-feishu` `codegen-guard` |
-| Rules | 记忆层 28 条全部激活 + `task-decomposition` `schema-guard` |
-| MCP | `feishu-mcp`（飞书发布）、`{env}-mysql-mcp`、`{env}-swagger-mcp`（可选） |
-
-**审查链**（4 层）：
-
-1. `consistency-reviewer` — 设计阶段制品对齐（HLD 后、LLD 后）
-2. `spec-reviewer` — 代码 vs LLD
-3. `code-quality-reviewer` — 代码质量
-4. `code-reviewer` — 最终审查
-
-## 制品链（Artifact Chain）
-
-子代理会话隔离，通过 `docs/artifacts/` 文件交接：
-
-| 制品 | 产出者 | 消费者 |
-|------|--------|--------|
-| `prd-source.md` | 云文档导入（可选） | prd-splitter |
-| `feishu-doc-links.md` | hld-to-feishu / lld-to-feishu | 用户参考 |
-| `feature-list.md` | prd-splitter | brainstorming, architect-hld |
-| `brainstorm-result.md` | brainstorming | architect-hld |
-| `hld.md` | architect-hld | db-ddl, api-contract, lld-author |
-| `ddl.md` | db-ddl | lld-author |
-| `api-contract.md` | api-contract | lld-author |
-| `lld.md` | lld-author | impl-planner, spec-reviewer |
-| `impl-plan.md` | impl-planner | implementer |
-| `root-cause.md` | bug-analyst | implementer |
-| `issue-context-{key}.md` | ones-issue-fetcher | loki-log-investigator / bug-analyst |
-| `root-cause-loki-{key}.md` | loki-log-investigator | implementer / bug-analyst |
-| `decision-log.md` | human-checkpoint | 所有下游子代理 |
-| `harness-debug.md` | harness-debug-logger | 用户调试 |
-| `verification-report.md` | done-verify | 用户审阅 |
-
-**每个子代理 prompt 必须包含**：
-
-1. 开始前读取上游制品文件
-2. 完成后写入对应制品文件
-3. 读取 `decision-log.md` 确保不违背已有决策
-4. 向 `harness-debug.md` 追加执行日志
-
-## 审查-修复闭环
-
-1. 审查者输出结构化报告（阻塞 / 警告 / 建议）
-2. 不通过 → 回退对应代理修复 → 重新审查
-3. 最多 5 轮，超限标记【人工介入】暂停
-
-## 人工检查点
-
-以下情况必须暂停问用户（`human-checkpoint.mdc`）：需求模糊、方案抉择、风险操作、超出范围、假设不确定。记录到 `docs/artifacts/decision-log.md`。
-
-## 记忆固化
-
-用户重复纠正同类错误时（`correction-detection.mdc`），调度 `memory-consolidator` 写入对应 `.mdc` 的「补充规则」章节。
-
-## 制品归档
-
-任务完成后，`docs/artifacts/` 根目录 `.md` 移入 `archive/{日期}-{任务简称}/`。
-
-## 规则优先级
-
-1. 执行层（`execution-boundary` `environment-boundary`）
-2. 反馈层（`*-guard` `correction-detection` `human-checkpoint`）
-3. 编排层（`git-*` `change-implementation` `task-decomposition` `stage-contracts` `rules-loader`）
-4. 记忆层（其余编码规范 `.mdc`）
-
-## 规则加载原则
-
-- 规则文件互不引用，每条自描述本领域约束
-- 场景映射由 `rules-loader.mdc`、workflow YAML、globs 决定
-- Agents/Skills 通过 loader 发现规则，不硬编码路径（`memory-consolidator` 写入路由除外）
+重复纠正先写入 `{artifact_root}/workflow/memory-change.md`，只有状态为
+`APPROVED` 且包含用户批准记录时，`memory-consolidator` 才能写入目标 Rule 的
+正确语义章节。增加或调整资源后必须执行资源校验和 Rule 交叉引用检查，不得
+恢复旧 Agent 名、旧制品根路径或旧 Workflow Schema。

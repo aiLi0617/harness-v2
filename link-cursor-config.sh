@@ -2,8 +2,9 @@
 #
 # 将 Harness Cursor 配置链接到目标业务项目，并复制 MCP 工作区模板。
 #
-# 软链（目录）: .cursor/agents, rules, skills, workflows, scripts, plugins, docs
+# 软链（目录）: .cursor/agents, rules, skills, workflows, scripts
 # 软链（文件）: .cursor/AGENTS.md, .cursor/CLAUDE.md
+# 本地目录: docs/artifacts/work, docs/artifacts/archive
 # 复制（独立）: .cursor/mcp-workspace/mcp.workspace.json, mcp.workspace.secrets.json
 #
 # 用法:
@@ -66,14 +67,28 @@ fi
 
 TARGET="$(cd "$TARGET" && pwd)"
 
+if [[ "$TARGET" == "$SOURCE" ]]; then
+    echo "错误: 目标目录不能是 Harness 源目录本身" >&2
+    exit 1
+fi
+case "$TARGET/" in
+    "$SOURCE/"*)
+        echo "错误: 目标目录不能位于 Harness 源目录内部，避免产生循环链接: $TARGET" >&2
+        exit 1
+        ;;
+esac
+
 LINK_DIRS=(
     ".cursor/agents"
     ".cursor/rules"
     ".cursor/skills"
     ".cursor/workflows"
     ".cursor/scripts"
-    ".cursor/plugins"
-    "docs"
+)
+
+LOCAL_DIRS=(
+    "docs/artifacts/work"
+    "docs/artifacts/archive"
 )
 
 LINK_FILES=(
@@ -106,7 +121,7 @@ for rel in "${LINK_DIRS[@]}"; do
 
     if [[ ! -e "$src_path" ]]; then
         echo "  [SKIP] $rel — 源不存在"
-        ((skip++))
+        ((++skip))
         continue
     fi
 
@@ -116,7 +131,7 @@ for rel in "${LINK_DIRS[@]}"; do
     if [[ -e "$dst_path" || -L "$dst_path" ]]; then
         if ! remove_existing "$dst_path"; then
             echo "  [SKIP] $rel — 已存在（使用 -f 覆盖）"
-            ((skip++))
+            ((++skip))
             continue
         fi
     fi
@@ -124,10 +139,10 @@ for rel in "${LINK_DIRS[@]}"; do
     if ln -s "$src_path" "$dst_path" 2>/dev/null; then
         echo "  [OK]   $rel (symlink)"
         echo "         $src_path -> $dst_path"
-        ((success++))
+        ((++success))
     else
         echo "  [FAIL] $rel" >&2
-        ((fail++))
+        ((++fail))
     fi
 done
 
@@ -139,7 +154,7 @@ for rel in "${LINK_FILES[@]}"; do
 
     if [[ ! -f "$src_path" ]]; then
         echo "  [SKIP] $rel — 源不存在"
-        ((skip++))
+        ((++skip))
         continue
     fi
 
@@ -149,7 +164,7 @@ for rel in "${LINK_FILES[@]}"; do
     if [[ -e "$dst_path" || -L "$dst_path" ]]; then
         if ! remove_existing "$dst_path"; then
             echo "  [SKIP] $rel — 已存在（使用 -f 覆盖）"
-            ((skip++))
+            ((++skip))
             continue
         fi
     fi
@@ -157,10 +172,23 @@ for rel in "${LINK_FILES[@]}"; do
     if ln -s "$src_path" "$dst_path" 2>/dev/null; then
         echo "  [OK]   $rel (symlink)"
         echo "         $src_path -> $dst_path"
-        ((success++))
+        ((++success))
     else
         echo "  [FAIL] $rel" >&2
-        ((fail++))
+        ((++fail))
+    fi
+done
+
+echo ""
+echo "=== 初始化目标项目本地目录 ==="
+for rel in "${LOCAL_DIRS[@]}"; do
+    dst_path="$TARGET/$rel"
+    if [[ ! -d "$dst_path" ]]; then
+        mkdir -p "$dst_path"
+        echo "  [OK]   $rel (local, 目标项目独立目录)"
+        ((++success))
+    else
+        echo "  [OK]   $rel (local, 已存在)"
     fi
 done
 
@@ -178,30 +206,30 @@ mkdir -p "$mcp_workspace_dir"
 if [[ -f "$workspace_template" ]]; then
     if [[ -f "$mcp_workspace_file" ]] && ! $FORCE; then
         echo "  [SKIP] .cursor/mcp-workspace/mcp.workspace.json — 已存在（使用 -f 覆盖）"
-        ((skip++))
+        ((++skip))
     else
         normalized_target="${TARGET//\\//}"
         sed "s|__TARGET_PROJECT_PATH__|$normalized_target|g" "$workspace_template" > "$mcp_workspace_file"
         echo "  [OK]   .cursor/mcp-workspace/mcp.workspace.json (copy)"
-        ((success++))
+        ((++success))
     fi
 else
     echo "  [SKIP] .cursor/mcp-workspace/mcp.workspace.json — 模板不存在"
-    ((skip++))
+    ((++skip))
 fi
 
 if [[ -f "$secrets_template" ]]; then
     if [[ -f "$mcp_secrets_file" ]] && ! $FORCE; then
         echo "  [SKIP] .cursor/mcp-workspace/mcp.workspace.secrets.json — 已存在（使用 -f 覆盖）"
-        ((skip++))
+        ((++skip))
     else
         cp "$secrets_template" "$mcp_secrets_file"
         echo "  [OK]   .cursor/mcp-workspace/mcp.workspace.secrets.json (copy)"
-        ((success++))
+        ((++success))
     fi
 else
     echo "  [SKIP] .cursor/mcp-workspace/mcp.workspace.secrets.json — 模板不存在"
-    ((skip++))
+    ((++skip))
 fi
 
 echo ""

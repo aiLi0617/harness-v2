@@ -56,7 +56,7 @@ disable-model-invocation: true
 
 Loki / XXL-Job / Nacos / RocketMQ：**始终走 mcp-switch**，不依赖 mcp-db / mcp-dbx。
 
-安装编排：**[mcp-install](../mcp-install/SKILL.md)**（选 `dbx` 或 `mysql-mcp,redis-mcp` 时自动设 `dataAccess`）。
+安装编排：**`mcp-install/scripts/init-mcp.*`**（选 `dbx` 或 `mysql-mcp,redis-mcp` 时自动设 `dataAccess`）。
 
 ## 脚本
 

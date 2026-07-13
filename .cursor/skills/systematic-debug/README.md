@@ -9,7 +9,7 @@
 
 本技能定义了从 Bug 报告到根因确认的完整调试流程。所有调试活动必须按步骤执行，严禁跳步。
 
-- 主要产出：**`docs/artifacts/root-cause.md`**
+- 主要产出：**`{artifact_root}/analysis/root-cause.md`**
 - Agent 执行细节以 [`SKILL.md`](./SKILL.md) 为准
 
 ### 适用场景
@@ -71,7 +71,7 @@ Bug 报告 / 异常信息
 | 工作流步骤 | 本 Skill 承担的内容 |
 |-----------|-------------------|
 | `reproduce` | 步骤 1：收集信息；本地复现并记录结果 |
-| `root-cause-analysis` | 步骤 2–5；由 `bug-analyst` 代理执行并写出 `docs/artifacts/root-cause.md` |
+| `root-cause-analysis` | 步骤 2–5；由 `problem-analyst` 代理执行并写出 `{artifact_root}/analysis/root-cause.md` |
 
 ---
 
@@ -79,8 +79,8 @@ Bug 报告 / 异常信息
 
 | 文件 | 说明 |
 |------|------|
-| `docs/artifacts/root-cause.md` | **必选**。报告格式以 SKILL.md 模板为准 |
-| `docs/artifacts/harness-debug.md` | 工作流 `debug: true` 时的执行轨迹（如启用） |
+| `{artifact_root}/analysis/root-cause.md` | **必选**。报告格式以 SKILL.md 模板为准 |
+| `{artifact_root}/workflow/harness-debug.md` | 工作流 `debug: true` 时的执行轨迹（如启用） |
 
 ### 严格禁止（摘要，详见 SKILL.md）
 
@@ -112,8 +112,8 @@ Bug 报告 / 异常信息
 
 1. 在 Cursor 中描述 Bug（现象、期望/实际行为、日志或堆栈、复现步骤）。
 2. 说明要按 **bugfix 工作流** 处理，或明确要求使用 `systematic-debug`。
-3. Agent 会按 `bugfix.yaml` 调度：先复现与收集信息，再调用 `bug-analyst` + 本 Skill 完成根因分析。
-4. 确认 `docs/artifacts/root-cause.md` 已生成且包含：根因位置、触发条件、建议修复方向。
+3. Agent 会按 `bugfix.yaml` 调度：先复现与收集信息，再调用 `problem-analyst` + 本 Skill 完成根因分析。
+4. 确认 `{artifact_root}/analysis/root-cause.md` 已生成且包含：根因位置、触发条件、建议修复方向。
 5. 再进入修复阶段（`tdd-bugfix` + `implementer`），**不要**在根因报告缺失时直接改业务代码。
 
 示例提示词：
@@ -133,7 +133,7 @@ Bug 报告 / 异常信息
 
 ```text
 请只读分析这个 Bug，读取 .cursor/skills/systematic-debug/SKILL.md 并严格执行，
-由 bug-analyst 输出 docs/artifacts/root-cause.md，不要修改任何源代码。
+由 problem-analyst 输出 {artifact_root}/analysis/root-cause.md，不要修改任何源代码。
 ```
 
 ### 方式三：人工按 Skill 自检
@@ -142,7 +142,7 @@ Bug 报告 / 异常信息
 
 1. 打开 SKILL.md，从步骤 1 开始逐项执行。
 2. 用 SKILL 中的「假设列表」表格记录假设与验证结果。
-3. 分析结束后，按 SKILL 末尾的报告模板填写 `docs/artifacts/root-cause.md`。
+3. 分析结束后，按 SKILL 末尾的报告模板填写 `{artifact_root}/analysis/root-cause.md`。
 
 ---
 
@@ -150,7 +150,7 @@ Bug 报告 / 异常信息
 
 | 资源 | 关系 |
 |------|------|
-| [`agents/bug-analyst.md`](../../agents/bug-analyst.md) | 只读分析代理，输出与本 Skill 一致的根因报告 |
+| [`agents/problem-analyst.md`](../../agents/problem-analyst.md) | 只读分析代理，输出与本 Skill 一致的根因报告 |
 | [`workflows/bugfix.yaml`](../../workflows/bugfix.yaml) | 工作流编排：`reproduce` / `root-cause-analysis` 引用本 Skill |
 | [`tdd-bugfix`](../tdd-bugfix/SKILL.md) | 下游：根因确认后的测试驱动修复 |
 | MCP（按需） | `loki-mcp` 查日志；`ones-mcp` 关联缺陷单 — 见 `mcp.mdc` |

@@ -1,4 +1,4 @@
-﻿---
+---
 name: codegen-guard
 description: >-
   在新建源文件前检查分层架构、包路径、命名、复用与必需元素，防止不合规代码入库。
@@ -89,9 +89,9 @@ Controller → Service → Repository → Entity
 ### 6. 与上游制品一致性检查
 
 新代码必须与设计制品对齐：
-- 类名/方法名与 `docs/artifacts/lld.md` 中的设计一致
-- 接口路径与 `docs/artifacts/api-contract.md` 中的定义一致
-- 实体字段与 `docs/artifacts/ddl.md` 中的表结构一致
+- 类名/方法名与 `{artifact_root}/design/lld.md` 中的设计一致
+- 接口路径与 `{artifact_root}/design/api-contract.md` 中的定义一致
+- 实体字段与 `{artifact_root}/design/ddl.md` 中的表结构一致
 
 ### 7. 禁止抄代码检查
 
@@ -133,4 +133,4 @@ Controller → Service → Repository → Entity
 - 检查不通过时禁止创建文件，必须先修正
 - 复用检查使用项目内搜索，不依赖外部索引
 - 每次检查结果记录到 harness-debug.md（通过 harness-debug-logger 技能）
-- 仅检查新增代码，不对已有代码做合规扫描（那是 code-reviewer 的职责）
+- 仅检查新增代码，不对已有代码做合规扫描（那是 quality-gate-reviewer 的职责）

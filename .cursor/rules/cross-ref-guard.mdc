@@ -1,14 +1,23 @@
-﻿---
-description: 规则文件交叉引用门禁
+---
+description: 规则文件交叉引用门禁；在处理匹配文件或相关任务时使用
 globs: ".cursor/rules/**/*.mdc,.cursor/agents/**/*.md"
 alwaysApply: false
 ---
 
 # 规则交叉引用门禁
 
+## 适用范围
+
+- 当引用、读取或修改匹配 `.cursor/rules/**/*.mdc,.cursor/agents/**/*.md` 的文件，或任务语义明确涉及本规则领域时适用。
+
+## 强制规则
+
+- 禁止在叶子规则正文写 `> 来源：xxx` 外部文档归因；规范内容直接归入对应语义章节，项目差异写入项目特化 Rule。
+- macOS/Linux：`git clone` 可能丢失 `.sh` 的 `+x`；优先用 `bash .cursor/scripts/…` 运行；或执行 `link-cursor-config.sh` 自动补权限
+
 > 自 2026-06 起 `.cursor/rules/` 已扁平化（无 `memory/`、`feedback/`、`orchestration/`、`execution/` 子目录），所有 `.mdc` 直接位于 `rules/` 根，引用一律使用文件名。
 
-## 架构约束
+### 架构约束
 
 - **叶子规则自描述** — `.cursor/rules/` 下的非路由规则（路由层除外）正文不得引用其他 `.mdc` 文件
 - **路由层负责组合** — 场景映射、纠正写入路由、自检流程允许引用路径（见下方白名单）
@@ -18,7 +27,7 @@ alwaysApply: false
   - 禁止被通用层规则引用（保持作用域单向流动：通用 → 项目，不允许反向）
   - 禁止省略 `globs` 或使用 `alwaysApply: true` —— 必须靠 globs 锁回所属项目，详见 `rules-loader.mdc` 「项目特化规则加载约定」
 
-## 禁止写法（叶子规则）
+### 禁止写法（叶子规则）
 
 ```markdown
 见 `pojo.mdc`
@@ -28,14 +37,14 @@ alwaysApply: false
 rules/naming.mdc
 ```
 
-## 允许写法
+### 允许写法
 
 | 场景 | 示例 |
 |------|------|
 | 同文件章节跳转 | `详见下方分页规范`、`详见 §9.1` |
 | 路由层白名单文件 | loader / correction-detection / java-edit-self-check / cross-ref-guard / memory-consolidator 内的映射表 |
 
-## 路由层白名单
+### 路由层白名单
 
 以下文件**允许**引用其他 `.mdc` 路径（仅限映射表与流程说明，禁止在正文复述规范内容）：
 
@@ -44,11 +53,11 @@ rules/naming.mdc
 - `cross-ref-guard.mdc`
 - `agents/memory-consolidator.md`
 
-## 触发时机
+### 触发时机
 
 修改或新增 `.cursor/rules/**/*.mdc` 后，**完成前必须**运行交叉引用检查脚本。
 
-## 检查方式
+### 检查方式
 
 在项目根目录执行：
 
@@ -71,22 +80,26 @@ chmod +x .cursor/scripts/check-rule-cross-refs.sh
 
 脚本非零退出码 → **禁止**声明任务完成，须移除违规引用或改入路由层。
 
-## 新增规则文件时
+### 新增规则文件时
 
-### 通用规则（`rules/<topic>.mdc`）
+新增或重构 Agent、Skill、Rule 时必须加载 harness-resource-authoring Skill，
+按对应模板完成领域归属、frontmatter、引用和校验检查。
+
+#### 通用规则（`rules/<topic>.mdc`）
 
 1. 在 `rules-loader.mdc` 场景表添加加载条目（如需组合阅读，并列列出文件名，**禁止**在正文互引）
-2. 同步 `correction-detection.mdc` 与 `memory-consolidator.md` 分类表（若为新领域）
+2. 若为可沉淀的新领域，同步 `correction-detection.mdc` 分类表和 `memory-consolidator.md` 契约
 3. 运行上述检查脚本确认通过
 
-### 项目特化规则（`rules/projects/<name>/<project>-<topic>.mdc`）
+#### 项目特化规则（`rules/projects/<name>/<project>-<topic>.mdc`）
 
 1. 文件名带 `<project>-` 前缀；frontmatter 必须含非空 `globs` 锁回所属项目路径，且 `alwaysApply: false`
 2. **不**登记到 `rules-loader.mdc` 场景表（项目特化规则由 globs 自主命中，不进通用映射）
 3. **不**登记到 `correction-detection.mdc` / `memory-consolidator.md` 分类表（这两张表只面向通用领域纠正路由）
 4. 运行上述检查脚本确认通过（对项目特化规则同样禁止互引）
 
-## 补充规则
+## 验证清单
 
-- 禁止在叶子规则正文写 `> 来源：xxx` 外部文档归因 — 规范内容直接写正文，项目差异放 `## 补充规则`
-- macOS/Linux：`git clone` 可能丢失 `.sh` 的 `+x`；优先用 `bash .cursor/scripts/…` 运行；或执行 `link-cursor-config.sh` 自动补权限
+- 确认本规则适用范围内的强制约束均已落实。
+- 确认没有出现本规则明确禁止的行为。
+- 确认代码、配置或制品与本规则中的示例和领域约定一致。
