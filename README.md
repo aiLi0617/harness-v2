@@ -254,25 +254,34 @@ macOS / Linux：
 macOS/Linux 使用 `-f`。强制模式会覆盖目标项目中的同名资源，执行前应确认目标
 目录没有需要保留的本地配置。
 
-脚本只链接 `.cursor/agents`、`rules`、`skills`、`workflows`、`scripts` 以及
-`.cursor/AGENTS.md`、`.cursor/CLAUDE.md`，并在目标项目复制独立的 MCP
-工作区配置模板。`docs/templates` 不链接；目标项目只创建本地
-`docs/artifacts/work` 和 `docs/artifacts/archive`，任务制品不会回写 Harness
-仓库。密钥配置同样不会与 Harness 仓库共享。
+脚本会链接 `.cursor` 与 `docs` 下的全部子项（Windows 目录用 junction、文件用硬链；
+macOS/Linux 用 symlink），但**不链接** `docs/templates`。`docs/artifacts/work` 与
+`docs/artifacts/archive` 仍为目标项目本地目录，任务制品不会回写 Harness 仓库。
 
-## MCP 工作区
+### 会话标题自动命名
 
-链接完成后：
+链接后，新 Agent 会话会按首条用户消息自动设置侧边栏标题：
 
-1. 编辑 `.cursor/mcp-workspace/mcp.workspace.json`。
-2. 编辑 `.cursor/mcp-workspace/mcp.workspace.secrets.json`。
-3. 按环境初始化 MCP Profile。
+| 输入格式 | 标题 |
+|---|---|
+| ONES 缺陷粘贴（如 `BTOC-1307 【标题】描述` + `ones.cn/.../issue/BTOC-1307`） | **Key + 同行中文**（最多 40 字，如 `BTOC-1471 【C端商城】品鉴大师推广订单...`）；仅 Key 无中文时用 Key |
+| 其他含中文的首条消息 | 首行中文（最多 40 字） |
 
-Windows 示例：
+**当前生效机制（双保险）：**
 
-```powershell
-powershell -File .cursor/skills/mcp-install/scripts/init-mcp.ps1 -Profile dev
-```
+1. **Hook `beforeSubmitPrompt`** — 从首条消息提取标题，通过官方支持的 `additional_context` 注入重命名指令（Hook 的 `title` 字段 Cursor 不消费）。
+2. **Rule `session-title.mdc`** — Agent 收到消息后调用 Cursor **内置** MCP `cursor-app-control` 的 `rename_chat`。该 MCP 由 Cursor 自带，**不要**写入 `.cursor/mcp.json`。
+
+若标题仍为英文自动摘要：
+
+- 确认业务项目已执行 `link-cursor-config`（`hooks` + `hooks.json` + `session-title.mdc` 已链接）
+- 在 Cursor **Settings → Hooks** 确认已加载，必要时重启 Cursor
+- **新开 Agent 会话**重试（旧会话不会 retroactive 重命名）
+- 首次调用 `rename_chat` 时**允许** MCP 授权弹窗
+
+## MCP 配置
+
+链接完成后，在 Cursor **Settings → MCP** 中按需启用 `dbx`、`middle-mcp`、`{projectId}-loki-mcp`、`{env}-mysql-mcp` 等服务。
 
 `issue-context-fetcher` 的描述保留 ONES/ONES MCP 发现关键词；
 `log-investigator` 保留 Loki、LogQL 和 traceId 关键词。平台名称不进入 Agent
@@ -298,7 +307,7 @@ macOS / Linux：
 
 资源校验覆盖：
 
-- 21/18/11 资源数量与 frontmatter 名称；
+- 21/15/11 资源数量与 frontmatter 名称；
 - Workflow Agent/Skill 引用和统一步骤字段；
 - `review-routing`、`repository-context` 的生产者契约与质量 fan-out/join；
 - Bugfix、Refactoring、Feature delivery 三条制品链；

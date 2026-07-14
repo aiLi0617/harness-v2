@@ -105,7 +105,7 @@ steps:
     description: 审查数据和并发风险
     agent: agents/data-concurrency-reviewer
     parallel_group: implementation-quality
-    skills: {required: [], on_demand: [skills/mcp-db, skills/mcp-dbx]}
+    skills: {required: [], on_demand: []}
     entry_artifacts: {required: [workflow/review-routing.md], optional: [design/ddl.md]}
     exit_artifacts: [quality/gates/implementation/data-concurrency.md]
     condition: 路由命中数据、事务、缓存、消息或并发

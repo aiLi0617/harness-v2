@@ -1,12 +1,11 @@
 ﻿<#
 .SYNOPSIS
-    将 Harness Cursor 配置链接到目标业务项目，并复制 MCP 工作区模板。
+    将 Harness Cursor 配置链接到目标业务项目。
 
 .DESCRIPTION
-    目录链接: .cursor/agents, rules, skills, workflows, scripts
-    硬链（文件）: .cursor/AGENTS.md, .cursor/CLAUDE.md  （Windows）
+    集合链接: .cursor、docs（逐项软链/硬链子项）
+    排除: docs/templates（不链接）
     本地目录: docs/artifacts/work, docs/artifacts/archive
-    复制（独立）: .cursor/mcp-workspace/mcp.workspace.json, mcp.workspace.secrets.json
 
 .PARAMETER Target
     目标业务项目根目录（必填）
@@ -52,22 +51,14 @@ if ($Target.StartsWith($Source + [IO.Path]::DirectorySeparatorChar, [System.Stri
     exit 1
 }
 
-$linkDirs = @(
-    ".cursor\agents"
-    ".cursor\rules"
-    ".cursor\skills"
-    ".cursor\workflows"
-    ".cursor\scripts"
+$collections = @(
+    @{ Rel = ".cursor"; Exclude = @() }
+    @{ Rel = "docs"; Exclude = @("templates") }
 )
 
 $localDirs = @(
     "docs\artifacts\work"
     "docs\artifacts\archive"
-)
-
-$linkFiles = @(
-    ".cursor\AGENTS.md"
-    ".cursor\CLAUDE.md"
 )
 
 $successCount = 0
@@ -133,55 +124,95 @@ function Remove-ExistingTarget {
     return $false
 }
 
-Write-Host ""
-Write-Host "=== 软链目录 ===" -ForegroundColor Cyan
-foreach ($rel in $linkDirs) {
-    $srcPath = Join-Path $Source $rel
-    $dstPath = Join-Path $Target $rel
+function Ensure-CollectionDirectory {
+    param([string]$RelPath)
 
-    if (-not (Test-Path $srcPath)) {
-        Write-LinkResult -RelPath $rel -Mode "junction" -Ok $false -Detail "源不存在"
-        continue
+    $dstDir = Join-Path $Target $RelPath
+    Ensure-ParentDirectory -Path $dstDir
+
+    if (-not (Test-Path $dstDir)) {
+        New-Item -ItemType Directory -Path $dstDir -Force | Out-Null
+        return $dstDir
     }
 
-    Ensure-ParentDirectory -Path $dstPath
-    if (-not (Remove-ExistingTarget -DstPath $dstPath -IsDir $true)) {
-        Write-LinkResult -RelPath $rel -Mode "junction" -Ok $false -Detail "已存在（使用 -Force 覆盖）"
-        continue
+    $existing = Get-Item $dstDir -Force
+    if ($existing.Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+        if (-not (Remove-ExistingTarget -DstPath $dstDir -IsDir $true)) {
+            throw "集合目录 $RelPath 已是链接，请使用 -Force 覆盖"
+        }
+        New-Item -ItemType Directory -Path $dstDir -Force | Out-Null
+    }
+
+    return $dstDir
+}
+
+function Link-CollectionEntry {
+    param(
+        [string]$RelPath,
+        [string]$SrcPath,
+        [string]$DstPath,
+        [bool]$IsDir
+    )
+
+    if (-not (Test-Path $SrcPath)) {
+        Write-LinkResult -RelPath $RelPath -Mode $(if ($IsDir) { "junction" } else { "hardlink" }) -Ok $false -Detail "源不存在"
+        return
+    }
+
+    Ensure-ParentDirectory -Path $DstPath
+    if (-not (Remove-ExistingTarget -DstPath $DstPath -IsDir $IsDir)) {
+        Write-LinkResult -RelPath $RelPath -Mode $(if ($IsDir) { "junction" } else { "hardlink" }) -Ok $false -Detail "已存在（使用 -Force 覆盖）"
+        return
     }
 
     try {
-        cmd /c mklink /J "$dstPath" "$srcPath" | Out-Null
-        Write-LinkResult -RelPath $rel -Mode "junction" -Ok $true -Detail "$srcPath -> $dstPath"
+        if ($IsDir) {
+            cmd /c mklink /J "$DstPath" "$SrcPath" | Out-Null
+            Write-LinkResult -RelPath $RelPath -Mode "junction" -Ok $true -Detail "$SrcPath -> $DstPath"
+        } else {
+            fsutil hardlink create "$DstPath" "$SrcPath" | Out-Null
+            Write-LinkResult -RelPath $RelPath -Mode "hardlink" -Ok $true -Detail "$SrcPath -> $DstPath"
+        }
     } catch {
-        Write-Error "[FAIL] $rel : $_"
-        $failCount++
+        Write-Error "[FAIL] $RelPath : $_"
+        $script:failCount++
     }
 }
 
 Write-Host ""
-Write-Host "=== 硬链文件 ===" -ForegroundColor Cyan
-foreach ($rel in $linkFiles) {
-    $srcPath = Join-Path $Source $rel
-    $dstPath = Join-Path $Target $rel
+Write-Host "=== 链接集合 ===" -ForegroundColor Cyan
+foreach ($collection in $collections) {
+    $rel = $collection.Rel
+    $exclude = @($collection.Exclude)
+    $srcDir = Join-Path $Source $rel
 
-    if (-not (Test-Path $srcPath)) {
-        Write-LinkResult -RelPath $rel -Mode "hardlink" -Ok $false -Detail "源不存在"
-        continue
-    }
-
-    Ensure-ParentDirectory -Path $dstPath
-    if (-not (Remove-ExistingTarget -DstPath $dstPath -IsDir $false)) {
-        Write-LinkResult -RelPath $rel -Mode "hardlink" -Ok $false -Detail "已存在（使用 -Force 覆盖）"
+    if (-not (Test-Path $srcDir)) {
+        Write-LinkResult -RelPath $rel -Mode "collection" -Ok $false -Detail "源集合不存在"
         continue
     }
 
     try {
-        fsutil hardlink create "$dstPath" "$srcPath" | Out-Null
-        Write-LinkResult -RelPath $rel -Mode "hardlink" -Ok $true -Detail "$srcPath -> $dstPath"
+        $dstDir = Ensure-CollectionDirectory -RelPath $rel
     } catch {
-        Write-Error "[FAIL] $rel : $_"
-        $failCount++
+        Write-LinkResult -RelPath $rel -Mode "collection" -Ok $false -Detail $_.Exception.Message
+        continue
+    }
+
+    Write-Host "  -> $rel" -ForegroundColor DarkCyan
+
+    Get-ChildItem -Path $srcDir -Force | ForEach-Object {
+        if ($exclude -contains $_.Name) {
+            Write-Host "     [SKIP] $rel\$($_.Name) — 排除项，不链接" -ForegroundColor DarkGray
+            return
+        }
+        if ($rel -eq "docs" -and $_.Name -eq "artifacts") {
+            Write-Host "     [SKIP] docs\artifacts — 使用目标项目本地目录" -ForegroundColor DarkGray
+            return
+        }
+
+        $entryRel = Join-Path $rel $_.Name
+        $dstPath = Join-Path $dstDir $_.Name
+        Link-CollectionEntry -RelPath $entryRel -SrcPath $_.FullName -DstPath $dstPath -IsDir:$_.PSIsContainer
     }
 }
 
@@ -198,52 +229,11 @@ foreach ($rel in $localDirs) {
 }
 
 Write-Host ""
-Write-Host "=== 复制 MCP 工作区 ===" -ForegroundColor Cyan
-
-$mcpWorkspaceDir = Join-Path $Target ".cursor\mcp-workspace"
-$mcpWorkspaceFile = Join-Path $mcpWorkspaceDir "mcp.workspace.json"
-$mcpSecretsFile = Join-Path $mcpWorkspaceDir "mcp.workspace.secrets.json"
-$workspaceTemplate = Join-Path $Source ".cursor\skills\mcp-switch\mcp.workspace.link-template.json"
-$secretsTemplate = Join-Path $Source ".cursor\skills\mcp-switch\mcp.workspace.secrets.example.json"
-
-if (-not (Test-Path $mcpWorkspaceDir)) {
-    New-Item -ItemType Directory -Path $mcpWorkspaceDir -Force | Out-Null
-}
-
-if (Test-Path $workspaceTemplate) {
-    if ((Test-Path $mcpWorkspaceFile) -and -not $Force) {
-        Write-LinkResult -RelPath ".cursor\mcp-workspace\mcp.workspace.json" -Mode "copy" -Ok $false -Detail "已存在（使用 -Force 覆盖）"
-    } else {
-        $content = Get-Content -Path $workspaceTemplate -Raw -Encoding UTF8
-        $normalizedTarget = $Target -replace '\\', '/'
-        $content = $content.Replace('__TARGET_PROJECT_PATH__', $normalizedTarget)
-        Set-Content -Path $mcpWorkspaceFile -Value $content -Encoding UTF8 -NoNewline
-        Write-LinkResult -RelPath ".cursor\mcp-workspace\mcp.workspace.json" -Mode "copy" -Ok $true
-    }
-} else {
-    Write-LinkResult -RelPath ".cursor\mcp-workspace\mcp.workspace.json" -Mode "copy" -Ok $false -Detail "模板不存在: mcp.workspace.link-template.json"
-}
-
-if (Test-Path $secretsTemplate) {
-    if ((Test-Path $mcpSecretsFile) -and -not $Force) {
-        Write-LinkResult -RelPath ".cursor\mcp-workspace\mcp.workspace.secrets.json" -Mode "copy" -Ok $false -Detail "已存在（使用 -Force 覆盖）"
-    } else {
-        Copy-Item -Path $secretsTemplate -Destination $mcpSecretsFile -Force
-        Write-LinkResult -RelPath ".cursor\mcp-workspace\mcp.workspace.secrets.json" -Mode "copy" -Ok $true
-    }
-} else {
-    Write-LinkResult -RelPath ".cursor\mcp-workspace\mcp.workspace.secrets.json" -Mode "copy" -Ok $false -Detail "模板不存在: mcp.workspace.secrets.example.json"
-}
-
-Write-Host ""
 Write-Host "完成: 成功 $successCount, 跳过 $skipCount, 失败 $failCount" -ForegroundColor Cyan
 
 Write-Host ""
-Write-Host "[提示] MCP 初始化" -ForegroundColor Magenta
-Write-Host "  1. 编辑 .cursor/mcp-workspace/mcp.workspace.json" -ForegroundColor DarkGray
-Write-Host "  2. 编辑 .cursor/mcp-workspace/mcp.workspace.secrets.json" -ForegroundColor DarkGray
-Write-Host "  3. powershell -File .cursor/skills/mcp-install/scripts/init-mcp.ps1 -Profile dev" -ForegroundColor DarkGray
-Write-Host "  日常切换: powershell -File .cursor/skills/mcp-switch/scripts/switch-all-mcp-profiles.ps1 dev" -ForegroundColor DarkGray
+Write-Host "[提示] MCP 配置" -ForegroundColor Magenta
+Write-Host "  在 Cursor Settings → MCP 中按需启用服务" -ForegroundColor DarkGray
 
 Write-Host ""
 Write-Host "[提示] 可选：初始化 CodeGraph 索引" -ForegroundColor Magenta

@@ -55,7 +55,7 @@ description: >-
 需要明确授权并进入人工检查点。
 
 ## Skill 调用条件
-查询只读元数据时按需调用 `mcp-db` 或 `mcp-dbx`。
+查询只读元数据（含库表与中间件配置）时按需调用 `dbx` MCP、`middle-mcp` 或 `{env}-mysql-mcp`。
 
 ## 禁止事项
 - 禁止执行 DDL/DML、清缓存或发布测试消息。

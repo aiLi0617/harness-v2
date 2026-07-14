@@ -29,7 +29,7 @@ description: >-
 - 明确区分日志事实与代码侧假设。
 
 ## Skill 调用条件
-- Loki profile 切换时调用 `mcp-switch`。
+- 查询日志时按需调用 `middle-mcp` 或 `{projectId}-loki-mcp`。
 - 执行记录使用 `harness-debug-logger`。
 
 ## 停止与升级条件

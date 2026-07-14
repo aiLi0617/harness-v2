@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 #
-# 将 Harness Cursor 配置链接到目标业务项目，并复制 MCP 工作区模板。
+# 将 Harness Cursor 配置链接到目标业务项目。
 #
-# 软链（目录）: .cursor/agents, rules, skills, workflows, scripts
-# 软链（文件）: .cursor/AGENTS.md, .cursor/CLAUDE.md
+# 集合链接: .cursor、docs（逐项软链子项）
+# 排除: docs/templates（不链接）
 # 本地目录: docs/artifacts/work, docs/artifacts/archive
-# 复制（独立）: .cursor/mcp-workspace/mcp.workspace.json, mcp.workspace.secrets.json
 #
 # 用法:
 #   ./link-cursor-config.sh <目标项目路径>
@@ -78,12 +77,9 @@ case "$TARGET/" in
         ;;
 esac
 
-LINK_DIRS=(
-    ".cursor/agents"
-    ".cursor/rules"
-    ".cursor/skills"
-    ".cursor/workflows"
-    ".cursor/scripts"
+COLLECTIONS=(
+    ".cursor"
+    "docs"
 )
 
 LOCAL_DIRS=(
@@ -91,14 +87,22 @@ LOCAL_DIRS=(
     "docs/artifacts/archive"
 )
 
-LINK_FILES=(
-    ".cursor/AGENTS.md"
-    ".cursor/CLAUDE.md"
-)
-
 success=0
 skip=0
 fail=0
+
+is_excluded() {
+    local collection="$1"
+    local name="$2"
+
+    if [[ "$collection" == "docs" && "$name" == "templates" ]]; then
+        return 0
+    fi
+    if [[ "$collection" == "docs" && "$name" == "artifacts" ]]; then
+        return 0
+    fi
+    return 1
+}
 
 remove_existing() {
     local dst_path="$1"
@@ -113,26 +117,43 @@ remove_existing() {
     return 1
 }
 
-echo ""
-echo "=== 软链目录 ==="
-for rel in "${LINK_DIRS[@]}"; do
-    src_path="$SOURCE/$rel"
-    dst_path="$TARGET/$rel"
+ensure_collection_directory() {
+    local rel="$1"
+    local dst_dir="$TARGET/$rel"
+
+    mkdir -p "$(dirname "$dst_dir")"
+
+    if [[ -L "$dst_dir" ]]; then
+        if ! remove_existing "$dst_dir"; then
+            echo "  [SKIP] $rel — 集合目录已是链接（使用 -f 覆盖）" >&2
+            return 1
+        fi
+    fi
+
+    if [[ ! -d "$dst_dir" ]]; then
+        mkdir -p "$dst_dir"
+    fi
+    return 0
+}
+
+link_collection_entry() {
+    local rel="$1"
+    local src_path="$2"
+    local dst_path="$3"
 
     if [[ ! -e "$src_path" ]]; then
         echo "  [SKIP] $rel — 源不存在"
         ((++skip))
-        continue
+        return
     fi
 
-    dst_parent="$(dirname "$dst_path")"
-    mkdir -p "$dst_parent"
+    mkdir -p "$(dirname "$dst_path")"
 
     if [[ -e "$dst_path" || -L "$dst_path" ]]; then
         if ! remove_existing "$dst_path"; then
             echo "  [SKIP] $rel — 已存在（使用 -f 覆盖）"
             ((++skip))
-            continue
+            return
         fi
     fi
 
@@ -144,39 +165,43 @@ for rel in "${LINK_DIRS[@]}"; do
         echo "  [FAIL] $rel" >&2
         ((++fail))
     fi
-done
+}
 
 echo ""
-echo "=== 软链文件 ==="
-for rel in "${LINK_FILES[@]}"; do
-    src_path="$SOURCE/$rel"
-    dst_path="$TARGET/$rel"
+echo "=== 链接集合 ==="
+for collection in "${COLLECTIONS[@]}"; do
+    src_dir="$SOURCE/$collection"
 
-    if [[ ! -f "$src_path" ]]; then
-        echo "  [SKIP] $rel — 源不存在"
+    if [[ ! -d "$src_dir" ]]; then
+        echo "  [SKIP] $collection — 源集合不存在"
         ((++skip))
         continue
     fi
 
-    dst_parent="$(dirname "$dst_path")"
-    mkdir -p "$dst_parent"
+    if ! ensure_collection_directory "$collection"; then
+        ((++skip))
+        continue
+    fi
 
-    if [[ -e "$dst_path" || -L "$dst_path" ]]; then
-        if ! remove_existing "$dst_path"; then
-            echo "  [SKIP] $rel — 已存在（使用 -f 覆盖）"
-            ((++skip))
+    echo "  -> $collection"
+
+    shopt -s dotglob nullglob
+    for entry in "$src_dir"/*; do
+        name="$(basename "$entry")"
+        if is_excluded "$collection" "$name"; then
+            if [[ "$collection" == "docs" && "$name" == "templates" ]]; then
+                echo "     [SKIP] docs/templates — 排除项，不链接"
+            elif [[ "$collection" == "docs" && "$name" == "artifacts" ]]; then
+                echo "     [SKIP] docs/artifacts — 使用目标项目本地目录"
+            fi
             continue
         fi
-    fi
 
-    if ln -s "$src_path" "$dst_path" 2>/dev/null; then
-        echo "  [OK]   $rel (symlink)"
-        echo "         $src_path -> $dst_path"
-        ((++success))
-    else
-        echo "  [FAIL] $rel" >&2
-        ((++fail))
-    fi
+        rel="$collection/$name"
+        dst_path="$TARGET/$rel"
+        link_collection_entry "$rel" "$entry" "$dst_path"
+    done
+    shopt -u dotglob nullglob
 done
 
 echo ""
@@ -193,54 +218,11 @@ for rel in "${LOCAL_DIRS[@]}"; do
 done
 
 echo ""
-echo "=== 复制 MCP 工作区 ==="
-
-mcp_workspace_dir="$TARGET/.cursor/mcp-workspace"
-mcp_workspace_file="$mcp_workspace_dir/mcp.workspace.json"
-mcp_secrets_file="$mcp_workspace_dir/mcp.workspace.secrets.json"
-workspace_template="$SOURCE/.cursor/skills/mcp-switch/mcp.workspace.link-template.json"
-secrets_template="$SOURCE/.cursor/skills/mcp-switch/mcp.workspace.secrets.example.json"
-
-mkdir -p "$mcp_workspace_dir"
-
-if [[ -f "$workspace_template" ]]; then
-    if [[ -f "$mcp_workspace_file" ]] && ! $FORCE; then
-        echo "  [SKIP] .cursor/mcp-workspace/mcp.workspace.json — 已存在（使用 -f 覆盖）"
-        ((++skip))
-    else
-        normalized_target="${TARGET//\\//}"
-        sed "s|__TARGET_PROJECT_PATH__|$normalized_target|g" "$workspace_template" > "$mcp_workspace_file"
-        echo "  [OK]   .cursor/mcp-workspace/mcp.workspace.json (copy)"
-        ((++success))
-    fi
-else
-    echo "  [SKIP] .cursor/mcp-workspace/mcp.workspace.json — 模板不存在"
-    ((++skip))
-fi
-
-if [[ -f "$secrets_template" ]]; then
-    if [[ -f "$mcp_secrets_file" ]] && ! $FORCE; then
-        echo "  [SKIP] .cursor/mcp-workspace/mcp.workspace.secrets.json — 已存在（使用 -f 覆盖）"
-        ((++skip))
-    else
-        cp "$secrets_template" "$mcp_secrets_file"
-        echo "  [OK]   .cursor/mcp-workspace/mcp.workspace.secrets.json (copy)"
-        ((++success))
-    fi
-else
-    echo "  [SKIP] .cursor/mcp-workspace/mcp.workspace.secrets.json — 模板不存在"
-    ((++skip))
-fi
-
-echo ""
 echo "完成: 成功 $success, 跳过 $skip, 失败 $fail"
 
 echo ""
-echo "  [提示] MCP 初始化"
-echo "    1. 编辑 .cursor/mcp-workspace/mcp.workspace.json"
-echo "    2. 编辑 .cursor/mcp-workspace/mcp.workspace.secrets.json"
-echo "    3. bash .cursor/skills/mcp-install/scripts/init-mcp.sh --profile dev"
-echo "    日常切换: powershell -File .cursor/skills/mcp-switch/scripts/switch-all-mcp-profiles.ps1 dev"
+echo "  [提示] MCP 配置"
+echo "    在 Cursor Settings → MCP 中按需启用服务"
 
 echo ""
 echo "  [提示] 可选：初始化 CodeGraph 索引"

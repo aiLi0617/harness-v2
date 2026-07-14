@@ -3,7 +3,6 @@
 
 # MCP 配置（生成产物与密钥勿提交）
 .cursor/mcp.json
-.cursor/mcp-workspace/mcp.workspace.secrets.json
 
 # CodeGraph 本地索引（在业务项目生成，勿提交）
 .codegraph/

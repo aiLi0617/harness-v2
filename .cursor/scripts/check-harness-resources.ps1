@@ -14,9 +14,9 @@ $skills = @(Get-ChildItem (Join-Path $Cursor 'skills') -Directory | Where-Object
 $workflows = @(Get-ChildItem (Join-Path $Cursor 'workflows') -Filter '*.yaml' -File -Recurse)
 $rules = @(Get-ChildItem (Join-Path $Cursor 'rules') -Filter '*.mdc' -File -Recurse)
 if ($agents.Count -ne 21) { Add-ValidationError "AGENT_COUNT expected=21 actual=$($agents.Count)" }
-if ($skills.Count -ne 18) { Add-ValidationError "SKILL_COUNT expected=18 actual=$($skills.Count)" }
+if ($skills.Count -ne 15) { Add-ValidationError "SKILL_COUNT expected=15 actual=$($skills.Count)" }
 if ($workflows.Count -ne 11) { Add-ValidationError "WORKFLOW_COUNT expected=11 actual=$($workflows.Count)" }
-if ($rules.Count -ne 62) { Add-ValidationError "RULE_COUNT expected=62 actual=$($rules.Count)" }
+if ($rules.Count -ne 72) { Add-ValidationError "RULE_COUNT expected=72 actual=$($rules.Count)" }
 
 foreach ($agent in $agents) {
     $text = Read-Utf8 $agent.FullName
@@ -73,6 +73,14 @@ foreach ($rule in $rules) {
         }
         if (-not $rule.BaseName.StartsWith('broker-')) {
             Add-ValidationError "PROJECT_RULE_NAME missing broker prefix file=$($rule.FullName)"
+        }
+    }
+    if ($rule.FullName -match '[\\/]rules[\\/]projects[\\/]b2cmall[\\/]') {
+        if ($always -ne 'false' -or -not $globs -or $globs -notmatch 'b2cmall') {
+            Add-ValidationError "PROJECT_RULE_SCOPE invalid b2cmall activation file=$($rule.FullName)"
+        }
+        if (-not $rule.BaseName.StartsWith('b2cmall-')) {
+            Add-ValidationError "PROJECT_RULE_NAME missing b2cmall prefix file=$($rule.FullName)"
         }
     }
 }

@@ -42,7 +42,7 @@ steps:
     agent: agents/issue-context-fetcher
     skills:
       required: []
-      on_demand: [skills/mcp-switch]
+      on_demand: []
     entry_artifacts:
       required: []
       optional: [context/prd-source.md]
@@ -55,7 +55,7 @@ steps:
     agent: agents/log-investigator
     skills:
       required: []
-      on_demand: [skills/mcp-switch]
+      on_demand: []
     entry_artifacts:
       required: [context/issue-context.md]
       optional: []
@@ -68,7 +68,7 @@ steps:
     agent: agents/problem-analyst
     skills:
       required: [skills/systematic-debug]
-      on_demand: [skills/mcp-db, skills/mcp-dbx]
+      on_demand: []
     entry_artifacts:
       required: [context/issue-context.md]
       optional: [context/log-evidence.md, analysis/log-investigation.md]
@@ -208,7 +208,7 @@ steps:
     description: 审查数据与并发风险
     agent: agents/data-concurrency-reviewer
     parallel_group: implementation-quality
-    skills: {required: [], on_demand: [skills/mcp-db, skills/mcp-dbx]}
+    skills: {required: [], on_demand: []}
     entry_artifacts: {required: [workflow/review-routing.md], optional: [design/ddl.md]}
     exit_artifacts: [quality/gates/implementation/data-concurrency.md]
     condition: 路由命中数据库、事务、缓存、MQ、Job、异步或并发

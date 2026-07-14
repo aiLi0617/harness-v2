@@ -13,9 +13,9 @@ skill_count=$(find "$CURSOR/skills" -mindepth 2 -maxdepth 2 -type f -name SKILL.
 workflow_count=$(find "$CURSOR/workflows" -type f -name '*.yaml' | wc -l | tr -d ' ')
 rule_count=$(find "$CURSOR/rules" -type f -name '*.mdc' | wc -l | tr -d ' ')
 [[ "$agent_count" == 21 ]] || fail "AGENT_COUNT expected=21 actual=$agent_count"
-[[ "$skill_count" == 18 ]] || fail "SKILL_COUNT expected=18 actual=$skill_count"
+[[ "$skill_count" == 15 ]] || fail "SKILL_COUNT expected=15 actual=$skill_count"
 [[ "$workflow_count" == 11 ]] || fail "WORKFLOW_COUNT expected=11 actual=$workflow_count"
-[[ "$rule_count" == 62 ]] || fail "RULE_COUNT expected=62 actual=$rule_count"
+[[ "$rule_count" == 72 ]] || fail "RULE_COUNT expected=72 actual=$rule_count"
 
 while IFS= read -r file; do
     name="$(basename "$file" .md)"
@@ -56,6 +56,11 @@ while IFS= read -r file; do
         grep -Eq '^alwaysApply: false$' "$file" || fail "PROJECT_RULE alwaysApply file=$file"
         grep -Eq '^globs: ".*broker.*"$' "$file" || fail "PROJECT_RULE globs file=$file"
         [[ "$(basename "$file")" == broker-* ]] || fail "PROJECT_RULE name file=$file"
+    fi
+    if [[ "$file" == *'/rules/projects/b2cmall/'* ]]; then
+        grep -Eq '^alwaysApply: false$' "$file" || fail "PROJECT_RULE alwaysApply file=$file"
+        grep -Eq '^globs: ".*b2cmall.*"$' "$file" || fail "PROJECT_RULE globs file=$file"
+        [[ "$(basename "$file")" == b2cmall-* ]] || fail "PROJECT_RULE name file=$file"
     fi
 done < <(find "$CURSOR/rules" -type f -name '*.mdc' | sort)
 

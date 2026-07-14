@@ -5,7 +5,7 @@ steps:
   - id: database-design
     description: 设计数据库结构与迁移策略
     agent: agents/database-designer
-    skills: {required: [], on_demand: [skills/mcp-db, skills/mcp-dbx]}
+    skills: {required: [], on_demand: []}
     entry_artifacts: {required: [design/hld.md], optional: []}
     exit_artifacts: [design/ddl.md]
     condition: HLD 包含持久化或数据迁移变更

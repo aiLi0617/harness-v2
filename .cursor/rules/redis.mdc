@@ -38,6 +38,15 @@ alwaysApply: false
 
 项目启动前维护 Redis 使用登记表，至少包含：Key 模式、用途、TTL、所属模块、备注。
 
+### 项目差异
+
+| 项目 | Key 常量落位 | 额外约定 |
+|---|---|---|
+| broker | `{module}/dal/redis/RedisKeyConstants` 接口 | 分布式锁/原子操作 key 可用 hash-tag：`{operate_orch:lock}:%s` |
+| b2cmall | biz 默认 `dal/redis/RedisKeyConstants`；orch 子域可放 `constants/{domain}/*RedisKeyConstants` | 流水号/计数类 key 在首次 `increment` 为 1 时须设置当日或业务窗口过期时间；分布式锁 key 须带业务语义前缀 |
+
+- 复杂对象用 `JsonUtils` 序列化为 String 存储；写入时显式带过期时间
+
 ### 禁止行为
 
 - 禁止存储超大 value（大 key 问题）

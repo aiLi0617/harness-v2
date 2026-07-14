@@ -44,7 +44,7 @@ description: >-
 修复、不可逆迁移或长时间锁表风险必须进入人工检查点。
 
 ## Skill 调用条件
-查询元数据时按需调用 `mcp-db` 或 `mcp-dbx`。
+查询元数据（含库表与中间件配置）时按需调用 `dbx` MCP、`middle-mcp` 或 `{env}-mysql-mcp`。
 
 ## 禁止事项
 - 禁止执行 DDL/DML 或修改数据库状态。

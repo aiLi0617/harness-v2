@@ -28,7 +28,6 @@ description: >-
 - 下游可直接启动日志调查或问题分析。
 
 ## Skill 调用条件
-- MCP profile 切换时调用 `mcp-switch`。
 - 执行记录使用 `harness-debug-logger`。
 
 ## 禁止事项

@@ -32,6 +32,8 @@ alwaysApply: false
 | `playwright-mcp` | 浏览器自动化（页面操作、快照、截图） | 按需 | 通用 |
 | `codegraph-mcp` | 本地代码知识图谱（符号搜索/调用链/影响分析） | 按需 | 通用 |
 | `loki-mcp` | Loki 日志查询（LogQL） | `agents/log-investigator` | bugfix |
+| `middle-mcp` | 中间件元数据与访问（Loki / XXL-Job / Nacos / RocketMQ 等，连接名模式） | `agents/database-designer`、`agents/log-investigator`、按需 | 全部 |
+| `dbx` | 数据层访问（MySQL / Redis / ES 等，连接名模式） | `agents/database-designer`、`agents/problem-analyst` | 全部（涉及 DB 时） |
 
 #### 环境 MCP（模板中用 `dev-` 示例，按实际环境调整）
 
@@ -56,30 +58,26 @@ alwaysApply: false
 - 使用 `mcp.json` 中的 key 作为 server 名，如 `server: "ones-mcp"`
 - **禁止**使用大写（`ONES`）、`user-` 前缀（`user-ones`）或不带 `-mcp` 后缀的名称
 - 环境 MCP 在代理文档中写模式（`{env}-mysql-mcp`），实际调用时按当前项目配置确定具体名称
+- **连接名模式**（与 profile MCP 二选一）：数据层用 MCP `dbx` + `connection_name`；中间件元数据与运维用 MCP `middle-mcp` + `connection_name`
 
 ### MCP 不可用时的处理
 
 1. **停止当前操作**，不要猜测或跳过
 2. 向用户报告缺失的 MCP 名称
-3. 提示用户检查 `mcp.workspace.json` / `mcp.workspace.secrets.json` 并重新执行 `init-mcp` 或 `switch-all-mcp-profiles`
+3. 提示用户在 Cursor Settings → MCP 中检查并启用对应服务
 4. 等待用户确认后再继续
 
 ### 配置说明
 
-MCP 由 **mcp-switch** 技能体系管理：
+MCP 由业务项目在 Cursor 本地配置：
 
 | 文件 | 作用 |
 |------|------|
-| `skills/mcp-switch/mcp-registry.json` | MCP 服务启动模板（一般不改） |
-| 业务项目 `.cursor/mcp-workspace/mcp.workspace.json` | 环境、项目 path、profile servers（`link-cursor-config` 复制初始化） |
-| 业务项目 `.cursor/mcp-workspace/mcp.workspace.secrets.json` | 密钥（从 example 复制，勿提交 Git） |
+| 业务项目 `.cursor/mcp.json` | MCP servers 定义（Cursor Settings → MCP 生成，勿提交密钥） |
 
 使用流程：
 
-1. 链接 harness 后，编辑 `.cursor/mcp-workspace/mcp.workspace.json`（`projects.local.path` 等）
-2. 在 `.cursor/mcp-workspace/mcp.workspace.secrets.json` 填入密钥
-3. 执行 `skills/mcp-install/scripts/init-mcp.ps1 -Profile dev`（或 `switch-all-mcp-profiles.ps1 dev`）
-4. 生成结果写入 `~/.cursor/mcp.json`；项目级 `.cursor/mcp.json` 已被 `.gitignore` 忽略
+1. 在 Cursor Settings → MCP 中按需启用 `dbx`、`middle-mcp`、`{projectId}-loki-mcp`、`{env}-mysql-mcp` 等服务
 
 ## 验证清单
 

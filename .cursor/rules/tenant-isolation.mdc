@@ -23,11 +23,21 @@ SaaS 多租户架构下的隔离红线与"忽略租户 id"接入口的识别口�
 - "跨租户查不到数据"的默认修复方向是**调用方传入正确的 tenantId**，不是去补 `ignore-urls` / `ignore-tables`
 - `ignore-urls` / `ignore-tables` **不是"申请跨租户的通道"**，详见下方识别口径
 
+### 项目配置前缀
+
+| 项目 | 配置前缀 | ignore-urls 示例 |
+|---|---|---|
+| broker | `broker.tenant` | `broker.tenant.ignore-urls` |
+| b2cmall | `zfn.tenant` | `zfn.tenant.ignore-urls`、`zfn.tenant.ignore-tables` |
+
+- 忽略租户方法以 `IgnoreTenantId` 结尾，并须在对端 biz 模块 `application.yaml` 同步登记 `ignore-urls`，禁止仅改代码不改配置
+- b2cmall SaaS 公共表（无 `tenant_id` 维度）登记在 `zfn.tenant.ignore-tables`（如 `oauth2_client`、`job_log`）
+
 ### 两个配置的语义（必须区分）
 
 #### `tenant.ignore-urls` — 入口不从上下文读 tenantId
 
-位置：被调 biz 模块 `src/main/resources/application.yaml`
+位置：被调 biz 模块 `src/main/resources/application.yaml`（前缀见上方「项目配置前缀」表）
 
 正当使用场景：**本身不携带租户上下文的接入点**
 

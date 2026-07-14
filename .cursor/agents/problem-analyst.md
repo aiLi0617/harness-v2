@@ -30,7 +30,7 @@ description: >-
 
 ## Skill 调用条件
 - 必须调用 `systematic-debug`。
-- 数据库取证按需调用 `mcp-db` 或 `mcp-dbx`。
+- 取证按需调用 `dbx` MCP、`middle-mcp` 或 `{env}-mysql-mcp`（含库表与中间件元数据）。
 
 ## 停止与升级条件
 证据不足以区分主要假设时停止并列出最小补充证据。
