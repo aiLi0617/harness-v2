@@ -3,8 +3,7 @@
     将 Harness Cursor 配置链接到目标业务项目。
 
 .DESCRIPTION
-    集合链接: .cursor、docs（逐项软链/硬链子项）
-    排除: docs/templates（不链接）
+    集合链接: .cursor、docs（逐项软链/硬链子项，含 docs/templates）
     本地目录: docs/artifacts/work, docs/artifacts/archive
 
 .PARAMETER Target
@@ -53,7 +52,7 @@ if ($Target.StartsWith($Source + [IO.Path]::DirectorySeparatorChar, [System.Stri
 
 $collections = @(
     @{ Rel = ".cursor"; Exclude = @() }
-    @{ Rel = "docs"; Exclude = @("templates") }
+    @{ Rel = "docs"; Exclude = @() }
 )
 
 $localDirs = @(

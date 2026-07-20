@@ -2,8 +2,7 @@
 #
 # 将 Harness Cursor 配置链接到目标业务项目。
 #
-# 集合链接: .cursor、docs（逐项软链子项）
-# 排除: docs/templates（不链接）
+# 集合链接: .cursor、docs（逐项软链子项，含 docs/templates）
 # 本地目录: docs/artifacts/work, docs/artifacts/archive
 #
 # 用法:
@@ -95,9 +94,6 @@ is_excluded() {
     local collection="$1"
     local name="$2"
 
-    if [[ "$collection" == "docs" && "$name" == "templates" ]]; then
-        return 0
-    fi
     if [[ "$collection" == "docs" && "$name" == "artifacts" ]]; then
         return 0
     fi
@@ -189,11 +185,7 @@ for collection in "${COLLECTIONS[@]}"; do
     for entry in "$src_dir"/*; do
         name="$(basename "$entry")"
         if is_excluded "$collection" "$name"; then
-            if [[ "$collection" == "docs" && "$name" == "templates" ]]; then
-                echo "     [SKIP] docs/templates — 排除项，不链接"
-            elif [[ "$collection" == "docs" && "$name" == "artifacts" ]]; then
-                echo "     [SKIP] docs/artifacts — 使用目标项目本地目录"
-            fi
+            echo "     [SKIP] docs/artifacts — 使用目标项目本地目录"
             continue
         fi
 

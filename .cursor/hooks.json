@@ -1,0 +1,27 @@
+{
+  "_description": "Harness Cursor Hooks：规则机械注入（beforeSubmitPrompt）+ 写码门禁（preToolUse）。详见 .cursor/hooks/*.mjs 文件头注释与 rules-loader.mdc。",
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "node .cursor/hooks/handle-session-start.mjs",
+        "_comment": "新会话清理过期注入状态"
+      }
+    ],
+    "beforeSubmitPrompt": [
+      {
+        "command": "node .cursor/hooks/handle-before-submit.mjs",
+        "matcher": "UserPromptSubmit",
+        "_comment": "编码消息前注入 rules-loader 场景规则到 additional_context"
+      }
+    ],
+    "preToolUse": [
+      {
+        "command": "node .cursor/hooks/handle-pre-tool-use.mjs",
+        "matcher": "Write|StrReplace|ApplyPatch|EditNotebook",
+        "failClosed": false,
+        "_comment": "写业务源码前校验/补注入规则；规则为空时 deny；脚本崩溃 fail-open"
+      }
+    ]
+  }
+}

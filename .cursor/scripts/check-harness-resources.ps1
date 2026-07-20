@@ -202,6 +202,37 @@ foreach ($file in $textFiles) {
 $pythonFiles = @(Get-ChildItem $PSScriptRoot -Filter '*.py' -File)
 if ($pythonFiles.Count -gt 0) { Add-ValidationError "SCRIPT_TYPE python files remain=$($pythonFiles.Name -join ',')" }
 
+$hooksJson = Join-Path $Cursor 'hooks.json'
+$hookScripts = @(
+  'hooks\handle-before-submit.mjs',
+  'hooks\handle-pre-tool-use.mjs',
+  'hooks\handle-session-start.mjs',
+  'hooks\lib\rules-engine.mjs'
+)
+if (-not (Test-Path $hooksJson)) {
+  Add-ValidationError 'HOOKS_JSON missing=.cursor/hooks.json'
+} else {
+  $hooksText = Read-Utf8 $hooksJson
+  foreach ($marker in @('beforeSubmitPrompt', 'preToolUse', 'sessionStart')) {
+    if (-not $hooksText.Contains($marker)) { Add-ValidationError "HOOKS_JSON missing=$marker" }
+  }
+}
+foreach ($rel in $hookScripts) {
+  if (-not (Test-Path (Join-Path $Cursor $rel))) {
+    Add-ValidationError "HOOK_SCRIPT missing=$rel"
+  }
+}
+
+$routingSync = Join-Path $PSScriptRoot 'check-rule-routing-sync.ps1'
+if (-not (Test-Path $routingSync)) {
+  Add-ValidationError 'RULE_ROUTING_SYNC missing=check-rule-routing-sync.ps1'
+} else {
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $routingSync
+  if ($LASTEXITCODE -ne 0) {
+    Add-ValidationError 'RULE_ROUTING_SYNC failed (rules-loader vs rules-engine drift)'
+  }
+}
+
 if ($errors.Count -gt 0) {
     Write-Host 'Harness resource validation failed:' -ForegroundColor Red
     $errors | ForEach-Object { Write-Host "- $_" -ForegroundColor Red }

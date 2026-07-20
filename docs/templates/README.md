@@ -7,9 +7,9 @@ Workflow 实际需要复制模板，不要一次性生成空白制品。
 |---|---|---|
 | `context/` | PRD、Issue、日志证据、仓库上下文 | 用户、获取型 Agent、主会话 |
 | `analysis/` | 功能清单、根因、影响、日志调查 | 分析型 Agent |
-| `design/` | Brainstorm、HLD、DDL、API、LLD | 设计型 Agent |
+| `design/` | Brainstorm、HLD、DDL、API、LLD；可执行脚本模板在 `design/sql/` | 设计型 Agent |
 | `plans/` | 实现、重构、测试、发布计划 | 规划型 Agent |
-| `delivery/` | 变更、发布、迁移、上线记录 | Implementer、发布阶段 |
+| `delivery/` | 变更、发布、迁移、上线记录；无设计阶段订正脚本模板在 `delivery/sql/` | Implementer、发布阶段 |
 | `quality/evidence/` | 编译、测试、覆盖率、Lint、扫描证据 | `done-verify` |
 | `quality/gates/` | 专项审查和最终门禁 | 质量委员会 |
 | `workflow/` | 意图、状态、决策、调试、审查路由、Rule 固化候选 | Workflow 主会话 |

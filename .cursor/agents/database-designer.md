@@ -1,7 +1,7 @@
 ---
 name: database-designer
 description: >-
-  只读基于 HLD 设计表、字段、索引、约束和迁移策略，产出 design/ddl.md。
+  只读基于 HLD 设计表、字段、索引、约束和迁移策略，产出 design/ddl.md 与 design/sql/ 下脚本。
   在功能涉及持久化结构、索引或数据迁移时使用。
   不用于执行 DDL、修改生产数据或实现持久层代码。
 ---
@@ -20,12 +20,14 @@ description: >-
 - `artifact_root`
 
 ## 输出制品
-`{artifact_root}/design/ddl.md`。
+- `{artifact_root}/design/ddl.md`
+- `{artifact_root}/design/sql/*.sql`（forward、rollback、回填等可执行脚本）
 
 ## 完成标准
 - 字段、类型、默认值、约束、索引和审计字段明确。
+- 可执行 SQL 已写入 `design/sql/`，`ddl.md` 的「脚本文件」表与文件内容一致。
 - 说明兼容、迁移、回滚、数据量和锁表风险。
-- 满足数据库、租户和安全 Rule。
+- 满足 database、schema-guard、租户和安全 Rule。
 
 ## 岗位工作原则
 - 从访问模式、生命周期和一致性要求推导结构，不按接口字段机械映射。
@@ -50,3 +52,4 @@ description: >-
 - 禁止执行 DDL/DML 或修改数据库状态。
 - 禁止只给 SQL 而省略迁移和回滚说明。
 - 禁止假设数据规模、数据库版本或线上窗口。
+- 禁止把变更脚本写入业务仓库；仅允许 `{artifact_root}/design/sql/`。

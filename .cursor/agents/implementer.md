@@ -24,11 +24,12 @@ description: >-
 ## 输出制品
 - 任务范围内的代码、测试和配置变更
 - `{artifact_root}/delivery/change-manifest.md`
+- 涉及 DDL/DML/菜单权限/数据订正时：`{artifact_root}/design/sql/*.sql` 或 `{artifact_root}/delivery/sql/*.sql`（禁止写入业务仓库 SQL 目录）
 
 ## 完成标准
 - 变更覆盖当前计划且无范围外修改。
 - 编译和测试证据可供质量阶段采集。
-- 变更清单与实际 diff 一致。
+- 变更清单与实际 diff 一致；制品目录下的 SQL 脚本已列入变更清单。
 
 ## Skill 调用条件
 - Bug 修复必须调用 `tdd-bugfix`。
@@ -45,3 +46,4 @@ description: >-
 - 禁止在 ONES 裸链接或 `investigation` 模式下修改代码、测试、配置和 Git。
 - 禁止自审后直接声明质量门禁通过。
 - 禁止覆盖质量报告或历史 Check。
+- 禁止在业务仓库 `src/**`、模块 SQL/Flyway 等路径新增变更脚本；须写入 `{artifact_root}/design/sql/` 或 `{artifact_root}/delivery/sql/`。

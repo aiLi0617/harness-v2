@@ -18,12 +18,27 @@ alwaysApply: true
 
 > 自 2026-06 起 `.cursor/rules/` 已扁平化（无 `memory/`、`feedback/`、`orchestration/`、`execution/` 子目录），所有 `.mdc` 直接位于 `rules/` 根。
 
+### Hook 机械加载（非 Workflow 也生效）
+
+编码类任务由 `.cursor/hooks/` **机械注入**规则，不依赖 Agent 自觉 Read：
+
+| Hook | 时机 | 行为 |
+|---|---|---|
+| `beforeSubmitPrompt` | 用户发送编码相关消息 | 按场景表 + 项目 globs 注入规则正文到 `additional_context` |
+| `preToolUse` | 首次 `Write`/`StrReplace` 写业务源码 | 无注入记录时同步注入；规则为空时 `deny` 阻断写码 |
+| `sessionStart` | 新会话 | 清理过期注入状态 |
+
+收到 `[Harness 规则机械注入]` 或 `[Harness 写码门禁]` 块时，规则已在上下文，**禁止**再用 Read 重复加载同一批规则；须输出 `[规则加载报告]` 与注入列表对账。
+
+Workflow 的 `rules.active` 清单与 Hook 场景表互补：Hook 负责非 Workflow 机械加载；走 Workflow 时仍按 YAML 清单与 Hook 注入结果合并对账。
+
 ### 加载流程
 
-1. **扫描目录**：列出 `.cursor/rules/` 下所有 `.mdc` 文件（不仅限于下方映射表中已列出的），同时**递归扫描** `.cursor/rules/projects/<project>/` 下所有 `.mdc`
-2. **匹配规则**：先按下方映射表加载已知规则，再检查扫描结果中是否有映射表未覆盖的新文件，根据文件名判断是否与当前任务相关；项目特化规则的命中由其自身 `globs` 决定
-3. **读取内容**：用 Read 工具读取所有相关规则文件的完整内容
-4. **严格遵守**：在后续执行过程中严格遵守所加载的规则
+1. **Hook 优先**：若本会话已有 Hook 注入记录，直接遵守注入规则；否则进入下列 Agent 侧加载
+2. **扫描目录**：列出 `.cursor/rules/` 下所有 `.mdc` 文件（不仅限于下方映射表中已列出的），同时**递归扫描** `.cursor/rules/projects/<project>/` 下所有 `.mdc`
+3. **匹配规则**：先按下方映射表加载已知规则，再检查扫描结果中是否有映射表未覆盖的新文件，根据文件名判断是否与当前任务相关；项目特化规则的命中由其自身 `globs` 决定
+4. **读取内容**：Hook 未覆盖时，用 Read 工具读取所有相关规则文件的完整内容
+5. **严格遵守**：在后续执行过程中严格遵守所加载的规则
 
 ### 场景加载指引
 
@@ -31,7 +46,8 @@ alwaysApply: true
 
 | 任务场景 | 必须加载的规则（按文件名） |
 |---|---|
-| 编写/修改 Java 代码 | `null-safety` `naming` `method-design` `collections` `exceptions` `comments` `code-style-format` `control-flow` `oop` `numeric` `constants` `java-edit-self-check` |
+| 编写/修改 Java 代码 | `null-safety` `naming` `method-design` `collections` `exceptions` `comments` `code-style-format` `control-flow` `oop` `numeric` `constants` `enums` `java-edit-self-check` |
+| 涉及枚举类/枚举字段 | `enums` `naming` `comments` `pojo` |
 | 涉及数据库/Entity/Mapper | `database` `schema-guard` `mybatis` |
 | 涉及 ER 图绘制/DDL 设计文档 | `er-diagram` |
 | 涉及 API/Controller | `api-design` `security` `error-codes` `enums` |
@@ -62,6 +78,32 @@ alwaysApply: true
 ### 映射表维护
 
 当在 `.cursor/rules/` 下**新增或删除** `.mdc` 规则文件时，必须同步更新上方映射表，保持映射表与实际文件一致。
+
+#### Hook 场景同步（与 `rules-engine.mjs` 双份维护）
+
+以下两处必须**同步变更**，否则 Hook 机械注入会漏规则或场景不命中：
+
+| 维护位置 | 维护内容 |
+|---|---|
+| 本文件「场景加载指引」表 | 任务场景描述 ↔ 规则文件名列表 |
+| `.cursor/hooks/lib/rules-engine.mjs` | `SCENE_DETECTORS`（何时命中）↔ `SCENE_TO_ROW`（映射到上表「任务场景」列文案） |
+
+**强制约定：**
+
+1. 场景表**每一行**「任务场景」须至少有一个 `SCENE_TO_ROW` 条目指向它（`tenant` 与 `mq` 可共用一行）
+2. `SCENE_DETECTORS` 与 `SCENE_TO_ROW` 的 **key 集合必须完全一致**（一一对应）
+3. 新增场景：先改本表 → 再改 `rules-engine.mjs` → 运行 `.cursor/scripts/check-rule-routing-sync.ps1`
+4. 通用根目录 `.mdc`（非 alwaysApply、非 `rules-loader`）须至少出现在本表某一行的规则列表中
+
+校验命令：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/scripts/check-rule-routing-sync.ps1
+```
+
+```bash
+bash .cursor/scripts/check-rule-routing-sync.sh
+```
 
 ### 项目特化规则加载约定
 

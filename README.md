@@ -254,9 +254,27 @@ macOS / Linux：
 macOS/Linux 使用 `-f`。强制模式会覆盖目标项目中的同名资源，执行前应确认目标
 目录没有需要保留的本地配置。
 
-脚本会链接 `.cursor` 与 `docs` 下的全部子项（Windows 目录用 junction、文件用硬链；
-macOS/Linux 用 symlink），但**不链接** `docs/templates`。`docs/artifacts/work` 与
+脚本会链接 `.cursor` 与 `docs` 下的全部子项（含 `docs/templates`；Windows 目录用 junction、文件用硬链；
+macOS/Linux 用 symlink）。`docs/artifacts/work` 与
 `docs/artifacts/archive` 仍为目标项目本地目录，任务制品不会回写 Harness 仓库。
+
+### 规则机械注入（非 Workflow）
+
+链接后，编码类 Agent 会话会通过 `.cursor/hooks.json` 自动注入场景规则：
+
+| Hook | 作用 |
+|---|---|
+| `beforeSubmitPrompt` | 检测编码意图，将规则正文注入 `additional_context` |
+| `preToolUse` | 首次写业务源码前注入规则；规则加载失败时阻断写入 |
+| `sessionStart` | 清理过期注入状态 |
+
+**前置条件**：本机已安装 Node.js（`node` 在 PATH 中）；业务项目已执行 `link-cursor-config`（`.cursor/hooks*` 已链接）。
+
+验证 Hook：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/scripts/smoke-hooks.ps1
+```
 
 ### 会话标题自动命名
 
@@ -294,7 +312,9 @@ Windows：
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/scripts/check-harness-resources.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/scripts/check-rule-cross-refs.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/scripts/check-rule-routing-sync.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/scripts/smoke-workflows.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/scripts/smoke-hooks.ps1
 ```
 
 macOS / Linux：
@@ -302,7 +322,9 @@ macOS / Linux：
 ```bash
 ./.cursor/scripts/check-harness-resources.sh
 ./.cursor/scripts/check-rule-cross-refs.sh
+./.cursor/scripts/check-rule-routing-sync.sh
 ./.cursor/scripts/smoke-workflows.sh
+./.cursor/scripts/smoke-hooks.sh
 ```
 
 资源校验覆盖：
@@ -313,7 +335,8 @@ macOS / Linux：
 - Bugfix、Refactoring、Feature delivery 三条制品链；
 - 废弃名称、旧制品根路径和旧 Schema；
 - 设计/质量 Agent 的岗位策略章节；
-- `stage-contracts.mdc` 与 Agent 的标题、路径和关键词重复风险。
+- `stage-contracts.mdc` 与 Agent 的标题、路径和关键词重复风险；
+- `rules-loader.mdc` 场景表与 `rules-engine.mjs` 路由双份同步（`check-rule-routing-sync`）。
 
 ## 文档
 

@@ -4,7 +4,7 @@
 
 - 任务 ID：{task-id}
 - 环境：{environment}
-- 计划引用：{ddl-or-rollout-plan}
+- 计划引用：{ddl-or-rollout-plan}；脚本路径：`design/sql/` 或 `delivery/sql/` 下实际文件名
 - 执行时间：{start-end}
 - 执行者：{actor}
 - 变更版本：{version}

@@ -133,6 +133,26 @@ if find "$CURSOR/scripts" -maxdepth 1 -type f -name '*.py' | grep -q .; then
     fail 'SCRIPT_TYPE Python files remain in .cursor/scripts'
 fi
 
+hooks_json="$CURSOR/hooks.json"
+hook_scripts=(
+  hooks/handle-before-submit.mjs
+  hooks/handle-pre-tool-use.mjs
+  hooks/handle-session-start.mjs
+  hooks/lib/rules-engine.mjs
+)
+[[ -f "$hooks_json" ]] || fail 'HOOKS_JSON missing=.cursor/hooks.json'
+hooks_text="$(cat "$hooks_json")"
+for marker in beforeSubmitPrompt preToolUse sessionStart; do
+  [[ "$hooks_text" == *"$marker"* ]] || fail "HOOKS_JSON missing=$marker"
+done
+for rel in "${hook_scripts[@]}"; do
+  [[ -f "$CURSOR/$rel" ]] || fail "HOOK_SCRIPT missing=$rel"
+done
+
+routing_sync="$CURSOR/scripts/check-rule-routing-sync.mjs"
+[[ -f "$routing_sync" ]] || fail 'RULE_ROUTING_SYNC missing=check-rule-routing-sync.mjs'
+node "$routing_sync" || fail 'RULE_ROUTING_SYNC failed (rules-loader vs rules-engine drift)'
+
 if (( errors > 0 )); then
     echo "Harness resource validation failed: $errors error(s)" >&2
     exit 1

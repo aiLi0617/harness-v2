@@ -91,7 +91,7 @@ Controller → Service → Repository → Entity
 新代码必须与设计制品对齐：
 - 类名/方法名与 `{artifact_root}/design/lld.md` 中的设计一致
 - 接口路径与 `{artifact_root}/design/api-contract.md` 中的定义一致
-- 实体字段与 `{artifact_root}/design/ddl.md` 中的表结构一致
+- 实体字段与 `{artifact_root}/design/ddl.md` 及 `{artifact_root}/design/sql/` 中 DDL 一致
 
 ### 7. 禁止抄代码检查
 

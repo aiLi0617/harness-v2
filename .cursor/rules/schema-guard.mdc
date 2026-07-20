@@ -16,7 +16,7 @@ alwaysApply: false
 
 ### 规则
 
-- **DDL 与 Entity 字段必须一一对应** — 新增/修改表字段后必须同步更新 Entity
+- **DDL 与 Entity 字段必须一一对应** — 新增/修改表字段后须同步更新 Entity；权威 DDL 在 `{artifact_root}/design/sql/`，说明在 `design/ddl.md`
 - **字段类型映射正确** — SQL 类型与 Java 类型匹配（如 VARCHAR → String, BIGINT → Long）
 - **索引与查询模式匹配** — WHERE 条件和 JOIN 字段必须有对应索引
 
@@ -24,8 +24,8 @@ alwaysApply: false
 
 变更数据库结构或 Entity 时：
 
-1. ✅ DDL 新增字段 → Entity 同步新增
-2. ✅ Entity 新增字段 → DDL 有对应列
+1. ✅ `design/sql/` 或 `delivery/sql/` 中 DDL 新增字段 → Entity 同步新增
+2. ✅ Entity 新增字段 → 制品目录脚本或 `design/ddl.md` 有对应列
 3. ✅ 字段类型映射正确（含精度、长度、可空）
 4. ✅ 字段命名一致（下划线 ↔ 驼峰转换正确）
 5. ✅ 新增查询条件有对应索引

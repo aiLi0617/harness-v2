@@ -85,9 +85,9 @@ Feature 八阶段编排只允许位于 `.cursor/workflows/feature-delivery.yaml`
 
 - `context/`：外部输入和仓库上下文；
 - `analysis/`：特性、根因、影响和日志分析；
-- `design/`：Brainstorm、HLD、DDL、API、LLD；
+- `design/`：Brainstorm、HLD、DDL、API、LLD；可执行 DDL/DML 脚本在 `design/sql/*.sql`（禁止写入业务仓库 SQL 目录）；
 - `plans/`：实现、重构、测试和发布计划；
-- `delivery/`：变更清单、发布链接、迁移和上线记录；
+- `delivery/`：变更清单、发布链接、迁移和上线记录；无设计阶段的订正脚本在 `delivery/sql/*.sql`；
 - `quality/evidence/`：编译、测试、覆盖率、Lint、扫描等机械证据；
 - `quality/gates/{gate-id}/`：专项审查与最终裁决；
 - `workflow/`：状态、决策、调试日志和审查路由。

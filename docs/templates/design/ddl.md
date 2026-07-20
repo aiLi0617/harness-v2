@@ -27,8 +27,21 @@
 
 ## DDL 草案
 
+可执行语句见 `design/sql/`；下表为索引，变更时须与脚本文件同步。
+
+### 脚本文件
+
+| 文件 | 用途 | 建议执行顺序 |
+|---|---|---|
+| `design/sql/001-forward-ddl.sql` | 向前 DDL | 1 |
+| `design/sql/002-rollback-ddl.sql` | 回滚 DDL | — |
+| `design/sql/{optional-backfill}.sql` | 回填/校验（可选） | 2 |
+
+### 摘要（可选）
+
 ```sql
-{forward-ddl}
+-- 与 design/sql/001-forward-ddl.sql 保持一致；勿在此单独维护另一份权威 DDL
+{forward-ddl-summary}
 ```
 
 ## 迁移步骤
